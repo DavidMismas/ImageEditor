@@ -1,0 +1,112 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "ImageEditorWheelMath-arm64-apple-macosx26.0-debug.module": ["<ImageEditorWheelMath-arm64-apple-macosx26.0-debug.module>"]
+  "ImageEditorWheelMathPackageTests-arm64-apple-macosx26.0-debug.module": ["<ImageEditorWheelMathPackageTests-arm64-apple-macosx26.0-debug.module>"]
+  "ImageEditorWheelMathPackageTests-arm64-apple-macosx26.0-debug.test": ["<ImageEditorWheelMathPackageTests-arm64-apple-macosx26.0-debug.test>"]
+  "ImageEditorWheelMathTests-arm64-apple-macosx26.0-debug.module": ["<ImageEditorWheelMathTests-arm64-apple-macosx26.0-debug.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<ImageEditorWheelMath-arm64-apple-macosx26.0-debug.module>"]
+  "test": ["<ImageEditorWheelMath-arm64-apple-macosx26.0-debug.module>","<ImageEditorWheelMathPackageTests-arm64-apple-macosx26.0-debug.test>","<ImageEditorWheelMathTests-arm64-apple-macosx26.0-debug.module>"]
+default: "main"
+nodes:
+  "/Users/david/Documents/CODE/ImageEditor/ImageEditor/Shared/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/david/Documents/CODE/ImageEditor/ImageEditorTests/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/david/Documents/CODE/ImageEditor/ImageEditor/Shared/ColorWheelMath.swift"]
+    outputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/sources"]
+    description: "Write auxiliary file /Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/sources"
+
+  "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.derived/runner.swift"]
+    outputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.build/sources"]
+    description: "Write auxiliary file /Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.build/sources"
+
+  "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.derived/runner.swift":
+    tool: test-entry-point-tool
+    inputs: []
+    outputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.derived/runner.swift"]
+
+  "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/ColorWheelMath.swift.o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.build/runner.swift.o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathTests.build/ColorWheelMathTests.swift.o"]
+    outputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.product/Objects.LinkFileList"
+
+  "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/david/Documents/CODE/ImageEditor/ImageEditorTests/ColorWheelMathTests.swift"]
+    outputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathTests.build/sources"]
+    description: "Write auxiliary file /Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathTests.build/sources"
+
+  "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+
+  "<ImageEditorWheelMath-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/ColorWheelMath.swift.o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMath.swiftmodule"]
+    outputs: ["<ImageEditorWheelMath-arm64-apple-macosx26.0-debug.module>"]
+
+  "<ImageEditorWheelMathPackageTests-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.build/runner.swift.o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMathPackageTests.swiftmodule"]
+    outputs: ["<ImageEditorWheelMathPackageTests-arm64-apple-macosx26.0-debug.module>"]
+
+  "<ImageEditorWheelMathPackageTests-arm64-apple-macosx26.0-debug.test>":
+    tool: phony
+    inputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.xctest/Contents/MacOS/ImageEditorWheelMathPackageTests"]
+    outputs: ["<ImageEditorWheelMathPackageTests-arm64-apple-macosx26.0-debug.test>"]
+
+  "<ImageEditorWheelMathTests-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathTests.build/ColorWheelMathTests.swift.o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMathTests.swiftmodule"]
+    outputs: ["<ImageEditorWheelMathTests-arm64-apple-macosx26.0-debug.module>"]
+
+  "C.ImageEditorWheelMath-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/david/Documents/CODE/ImageEditor/ImageEditor/Shared/ColorWheelMath.swift","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/sources"]
+    outputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/ColorWheelMath.swift.o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMath.swiftmodule"]
+    description: "Compiling Swift Module 'ImageEditorWheelMath' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","ImageEditorWheelMath","-emit-dependencies","-emit-module","-emit-module-path","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMath.swiftmodule","-output-file-map","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/sources","-I","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx13.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/include/ImageEditorWheelMath-Swift.h","-swift-version","6","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","imageeditor"]
+
+  "C.ImageEditorWheelMathPackageTests-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.derived/runner.swift","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMathTests.swiftmodule","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.build/sources"]
+    outputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.build/runner.swift.o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMathPackageTests.swiftmodule"]
+    description: "Compiling Swift Module 'ImageEditorWheelMathPackageTests' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","ImageEditorWheelMathPackageTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMathPackageTests.swiftmodule","-output-file-map","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.build/sources","-I","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx13.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.build/include/ImageEditorWheelMathPackageTests-Swift.h","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","imageeditor"]
+
+  "C.ImageEditorWheelMathPackageTests-arm64-apple-macosx26.0-debug.test":
+    tool: shell
+    inputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/ColorWheelMath.swift.o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.build/runner.swift.o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathTests.build/ColorWheelMathTests.swift.o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.product/Objects.LinkFileList"]
+    outputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.xctest/Contents/MacOS/ImageEditorWheelMathPackageTests"]
+    description: "Linking ./.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.xctest/Contents/MacOS/ImageEditorWheelMathPackageTests"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-L","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug","-o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.xctest/Contents/MacOS/ImageEditorWheelMathPackageTests","-module-name","ImageEditorWheelMathPackageTests","-Xlinker","-no_warn_duplicate_libraries","-Xlinker","-bundle","-Xlinker","-rpath","-Xlinker","@loader_path/../../../","@/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathPackageTests.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx14.0","-Xlinker","-add_ast_path","-Xlinker","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMath.swiftmodule","-Xlinker","-add_ast_path","-Xlinker","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMathPackageTests.swiftmodule","-Xlinker","-add_ast_path","-Xlinker","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMathTests.swiftmodule","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g"]
+
+  "C.ImageEditorWheelMathTests-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/david/Documents/CODE/ImageEditor/ImageEditorTests/ColorWheelMathTests.swift","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMath.swiftmodule","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathTests.build/sources"]
+    outputs: ["/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathTests.build/ColorWheelMathTests.swift.o","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMathTests.swiftmodule"]
+    description: "Compiling Swift Module 'ImageEditorWheelMathTests' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","ImageEditorWheelMathTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules/ImageEditorWheelMathTests.swiftmodule","-output-file-map","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathTests.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMathTests.build/sources","-I","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-swift-version","6","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","imageeditor"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/david/Documents/CODE/ImageEditor/ImageEditor/Shared/","/Users/david/Documents/CODE/ImageEditor/ImageEditorTests/","/Users/david/Documents/CODE/ImageEditor/Package.swift","/Users/david/Documents/CODE/ImageEditor/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

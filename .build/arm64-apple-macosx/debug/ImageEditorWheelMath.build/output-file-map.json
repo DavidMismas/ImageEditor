@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/master.swiftdeps"
+  },
+  "/Users/david/Documents/CODE/ImageEditor/ImageEditor/Shared/ColorWheelMath.swift": {
+    "dependencies": "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/ColorWheelMath.d",
+    "object": "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/ColorWheelMath.swift.o",
+    "swiftmodule": "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/ColorWheelMath~partial.swiftmodule",
+    "swift-dependencies": "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/ColorWheelMath.swiftdeps",
+    "diagnostics": "/Users/david/Documents/CODE/ImageEditor/.build/arm64-apple-macosx/debug/ImageEditorWheelMath.build/ColorWheelMath.dia"
+  }
+}
