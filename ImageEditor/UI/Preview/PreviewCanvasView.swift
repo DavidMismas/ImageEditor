@@ -20,9 +20,10 @@ struct PreviewCanvasView: View {
                 )
 
                 Color.clear
-                    .onAppear { onSizeChange(geometry.size) }
-                    .onChange(of: geometry.size) { _, newValue in
-                        onSizeChange(newValue)
+                    .task(id: geometry.size) {
+                        await MainActor.run {
+                            onSizeChange(geometry.size)
+                        }
                     }
 
                 switch mode {
@@ -60,7 +61,7 @@ struct PreviewCanvasView: View {
                     .padding(12)
                 }
 
-                if isRendering {
+                if isRendering && primaryImage == nil && comparisonImage == nil {
                     ProgressView()
                         .controlSize(.large)
                         .padding(20)
@@ -101,7 +102,8 @@ private struct PreviewImageSurface: View {
                     } else {
                         VStack(spacing: 10) {
                             Image(systemName: "photo.on.rectangle.angled")
-                                .font(.system(size: 30, weight: .medium))
+                                .font(.largeTitle)
+                                .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
                             Text("Import an image to start editing")
                                 .foregroundStyle(.secondary)
@@ -112,7 +114,8 @@ private struct PreviewImageSurface: View {
 
                     if let title {
                         Text(title)
-                            .font(.system(.caption, design: .monospaced, weight: .semibold))
+                            .font(.caption)
+                            .fontWeight(.semibold)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(.black.opacity(0.55), in: Capsule())

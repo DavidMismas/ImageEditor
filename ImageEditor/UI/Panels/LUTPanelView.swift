@@ -10,7 +10,8 @@ struct LUTPanelView: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack {
                     Text("LUT")
-                        .font(.system(.title3, design: .serif, weight: .bold))
+                        .font(.title3)
+                        .fontWeight(.bold)
                     Spacer()
                     Button("Import .cube", action: onImport)
                         .buttonStyle(.borderedProminent)
@@ -30,19 +31,20 @@ struct LUTPanelView: View {
                 if luts.isEmpty {
                     Text("Imported LUTs will appear here. Only 3D `.cube` files are supported.")
                         .foregroundStyle(.secondary)
-                        .font(.system(.subheadline, design: .rounded))
+                        .font(.subheadline)
                         .padding(.top, 8)
                 } else {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Library")
-                            .font(.system(.headline, design: .rounded, weight: .semibold))
+                            .font(.headline)
+                            .fontWeight(.semibold)
                         ForEach(luts) { lut in
                             HStack {
                                 Text(lut.name)
                                     .lineLimit(1)
                                 Spacer()
                                 Text("\(lut.dimension)^3")
-                                    .font(.system(.caption, design: .monospaced))
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                             .padding(.vertical, 4)

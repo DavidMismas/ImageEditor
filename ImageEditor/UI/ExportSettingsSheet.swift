@@ -8,9 +8,10 @@ struct ExportSettingsSheet: View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Export")
-                    .font(.system(size: 24, weight: .bold, design: .serif))
+                    .font(.title2)
+                    .fontWeight(.bold)
                 Text("Format and color settings live here, not in the main toolbar.")
-                    .font(.system(.subheadline, design: .rounded))
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
@@ -39,11 +40,11 @@ struct ExportSettingsSheet: View {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
                             Text("JPEG Quality")
-                                .font(.system(.caption, design: .monospaced))
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
                             Spacer()
                             Text(String(format: "%.0f", viewModel.jpegQuality))
-                                .font(.system(.caption, design: .monospaced))
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
 
@@ -88,7 +89,7 @@ struct ExportSettingsSheet: View {
     private func pickerRow<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         HStack {
             Text(title)
-                .font(.system(.caption, design: .monospaced))
+                .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
             content()

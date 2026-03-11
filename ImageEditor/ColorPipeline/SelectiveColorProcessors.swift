@@ -45,7 +45,7 @@ struct HSLProcessor: Sendable {
                 continue
             }
 
-            let width = hueWidth(for: channel.channel)
+            let width = channel.channel.hueWidth
             let weight = ProcessingMath.softHueWeight(hue: lch.y, center: channel.channel.hueCenter, width: width) * chromaGate
             guard weight > 0 else {
                 continue
@@ -68,31 +68,21 @@ struct HSLProcessor: Sendable {
         adjusted.z = max(adjusted.z, 0)
         return adjusted
     }
-
-    private func hueWidth(for channel: HSLChannelKind) -> Float {
-        switch channel {
-        case .orange:
-            return 42
-        case .yellow, .aqua:
-            return 38
-        default:
-            return 34
-        }
-    }
 }
 
 struct ColorGradingProcessor: Sendable {
     func apply(to lab: SIMD3<Float>, sourceColor: SIMD3<Float>, settings: ColorGradingSettings) -> SIMD3<Float> {
         // `sourceColor` is already in the bounded grading domain used by the color cube,
-        // so using direct luminance here gives the shadows/highlights wheels meaningful
-        // range. The highlights mask needs to start earlier than a specular-only
-        // shoulder or the wheel feels dead on most photographs.
+        // so using direct luminance here gives the grading masks a stable tonal anchor.
         let tonal = ProcessingMath.linearLuminance(sourceColor).clamped(to: 0...1)
-        let shadowMask = Foundation.pow(Double(1 - ProcessingMath.smoothstep(0.16, 0.52, tonal)), 1.15).toFloat
-        let highlightBase = ProcessingMath.smoothstep(0.24, 0.60, tonal)
+        // Keep shadows out of the midtones so they stop behaving like a second global wheel.
+        let shadowMask = Foundation.pow(Double(1 - ProcessingMath.smoothstep(0.10, 0.34, tonal)), 1.45).toFloat
+        // Highlights can reach a bit further down into the upper mids, but should still
+        // stay meaningfully narrower than the global correction.
+        let highlightBase = ProcessingMath.smoothstep(0.20, 0.58, tonal)
         let highlightMask = (
-            highlightBase * 0.35
-            + Foundation.pow(Double(highlightBase), 0.72).toFloat * 0.65
+            highlightBase * 0.30
+            + Foundation.pow(Double(highlightBase), 0.82).toFloat * 0.70
         ).clamped(to: 0...1)
 
         var adjusted = lab
@@ -106,10 +96,11 @@ struct ColorGradingProcessor: Sendable {
     private func apply(_ wheel: ColorWheelSettings, mask: Float, to lab: SIMD3<Float>) -> SIMD3<Float> {
         let wheelValue = ColorWheelValue(
             angleRadians: ColorWheelMath.angleFromDegrees(wheel.hue),
-            intensity: wheel.intensity / 100,
-            luminance: wheel.luminance / 100
+            intensity: wheel.intensity / 100
         )
-        guard wheelValue.intensity != 0 || wheelValue.luminance != 0 else {
+        // Grading now uses a simpler hue/value model, so legacy luminance
+        // values are intentionally ignored to keep the result aligned with the UI.
+        guard wheelValue.intensity != 0 else {
             return lab
         }
 
@@ -118,7 +109,6 @@ struct ColorGradingProcessor: Sendable {
         let chromaAmount = mask * 0.15
         adjusted.y += Float(tint.x) * chromaAmount
         adjusted.z += Float(tint.y) * chromaAmount
-        adjusted.x += Float(wheelValue.luminance) * mask * 0.20
         return adjusted
     }
 }

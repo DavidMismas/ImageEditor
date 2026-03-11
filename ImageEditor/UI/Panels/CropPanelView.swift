@@ -7,7 +7,8 @@ struct CropPanelView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Crop & Geometry")
-                    .font(.system(.title3, design: .serif, weight: .bold))
+                    .font(.title3)
+                    .fontWeight(.bold)
 
                 Picker("Aspect", selection: document.binding(for: \.crop.aspectPreset)) {
                     ForEach(CropAspectPreset.allCases) { preset in

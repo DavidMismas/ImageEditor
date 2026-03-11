@@ -15,7 +15,8 @@ struct ColorWheelControl: View {
             let processingTint = ColorWheelMath.wheelValueToProcessingTint(wheelValue)
 
             Text(title)
-                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .font(.caption)
+                .fontWeight(.semibold)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             GeometryReader { geometry in
@@ -89,7 +90,7 @@ struct ColorWheelControl: View {
                         )
                     )
                 }
-                .font(.system(.caption2, design: .monospaced))
+                .font(.caption2)
                 .foregroundStyle(.secondary)
             }
         }

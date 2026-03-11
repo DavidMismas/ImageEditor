@@ -9,9 +9,10 @@ struct MediaLibraryView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Media Library")
-                        .font(.system(.title3, design: .serif, weight: .bold))
+                        .font(.title3)
+                        .fontWeight(.bold)
                     Text("\(viewModel.documents.count) imported")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
@@ -66,10 +67,11 @@ private struct MediaLibraryRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(document.title)
                     .lineLimit(1)
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
 
                 Text(document.asset.isRAW ? "RAW" : "Standard")
-                    .font(.system(.caption2, design: .monospaced))
+                    .font(.caption2)
                     .foregroundStyle(document.asset.isRAW ? .orange : .secondary)
             }
 

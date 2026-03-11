@@ -7,7 +7,8 @@ struct EffectsPanelView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Effects")
-                    .font(.system(.title3, design: .serif, weight: .bold))
+                    .font(.title3)
+                    .fontWeight(.bold)
 
                 AdjustmentSlider(title: "Clarity", value: document.binding(for: \.effects.clarity), range: 0...100)
                 AdjustmentSlider(title: "Sharpness", value: document.binding(for: \.effects.sharpness), range: 0...100)

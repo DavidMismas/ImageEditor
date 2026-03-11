@@ -150,6 +150,17 @@ enum HSLChannelKind: String, CaseIterable, Identifiable, Codable, Sendable {
             return 322
         }
     }
+
+    var hueWidth: Float {
+        switch self {
+        case .orange:
+            return 42
+        case .yellow, .aqua:
+            return 38
+        default:
+            return 34
+        }
+    }
 }
 
 extension Comparable {

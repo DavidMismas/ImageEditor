@@ -20,9 +20,10 @@ struct EditingSidebarView: View {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Adjustments")
-                        .font(.system(size: 22, weight: .bold, design: .serif))
+                        .font(.title2)
+                        .fontWeight(.bold)
                     Text(document.asset.isRAW ? "RAW workflow" : "Pixel workflow")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.bottom, 4)
@@ -195,23 +196,20 @@ struct EditingSidebarView: View {
 
     private var gradingControls: some View {
         VStack(alignment: .leading, spacing: 10) {
-            gradingWheelRow(
+            gradingSliders(
                 title: "Global",
                 hue: \.color.grading.global.hue,
-                intensity: \.color.grading.global.intensity,
-                luminance: \.color.grading.global.luminance
+                value: \.color.grading.global.intensity
             )
-            gradingWheelRow(
+            gradingSliders(
                 title: "Shadows",
                 hue: \.color.grading.shadows.hue,
-                intensity: \.color.grading.shadows.intensity,
-                luminance: \.color.grading.shadows.luminance
+                value: \.color.grading.shadows.intensity
             )
-            gradingWheelRow(
+            gradingSliders(
                 title: "Highlights",
                 hue: \.color.grading.highlights.hue,
-                intensity: \.color.grading.highlights.intensity,
-                luminance: \.color.grading.highlights.luminance
+                value: \.color.grading.highlights.intensity
             )
         }
     }
@@ -224,7 +222,7 @@ struct EditingSidebarView: View {
                 }
             }
 
-            AdjustmentSlider(title: "Hue", value: hslBinding(\.hue), range: -100...100)
+            HSLHueAdjustmentSlider(title: "Hue", channel: selectedChannel, value: hslBinding(\.hue))
             AdjustmentSlider(title: "Saturation", value: hslBinding(\.saturation), range: -100...100)
             AdjustmentSlider(title: "Luminance", value: hslBinding(\.luminance), range: -100...100)
         }
@@ -252,7 +250,7 @@ struct EditingSidebarView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Creative look")
-                    .font(.system(.caption, design: .monospaced))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Import .cube", action: onImportLUT)
@@ -275,11 +273,12 @@ struct EditingSidebarView: View {
                     ForEach(luts) { lut in
                         HStack(spacing: 8) {
                             Text(lut.name)
-                                .font(.system(.caption, design: .rounded, weight: .medium))
+                                .font(.caption)
+                                .fontWeight(.medium)
                                 .lineLimit(1)
                             Spacer()
                             Text("\(lut.dimension)^3")
-                                .font(.system(.caption2, design: .monospaced))
+                                .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -289,31 +288,16 @@ struct EditingSidebarView: View {
         }
     }
 
-    private func gradingWheel(
+    private func gradingSliders(
         title: String,
         hue: WritableKeyPath<AdjustmentSettings, Double>,
-        intensity: WritableKeyPath<AdjustmentSettings, Double>
+        value: WritableKeyPath<AdjustmentSettings, Double>
     ) -> some View {
-        ColorWheelControl(
+        ColorGradingSliders(
             title: title,
             hue: document.binding(for: hue),
-            intensity: document.binding(for: intensity),
-            diameter: 122,
-            showsReadout: true
+            value: document.binding(for: value)
         )
-        .frame(width: 122)
-    }
-
-    private func gradingWheelRow(
-        title: String,
-        hue: WritableKeyPath<AdjustmentSettings, Double>,
-        intensity: WritableKeyPath<AdjustmentSettings, Double>,
-        luminance: WritableKeyPath<AdjustmentSettings, Double>
-    ) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            gradingWheel(title: title, hue: hue, intensity: intensity)
-            AdjustmentSlider(title: "Luminance", value: document.binding(for: luminance), range: -100...100)
-        }
     }
 
     private func compactMenu<SelectionValue: Hashable, Content: View>(
@@ -323,7 +307,7 @@ struct EditingSidebarView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.system(.caption, design: .monospaced))
+                .font(.caption)
                 .foregroundStyle(.secondary)
             Picker(title, selection: selection, content: content)
                 .pickerStyle(.menu)
@@ -379,9 +363,10 @@ private struct InspectorSection<Content: View>: View {
             HStack(alignment: .top, spacing: 8) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.system(.headline, design: .serif, weight: .bold))
+                        .font(.headline)
+                        .fontWeight(.bold)
                     Text(subtitle)
-                        .font(.system(.caption, design: .rounded))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
@@ -389,7 +374,7 @@ private struct InspectorSection<Content: View>: View {
 
                 if let onReset {
                     Button("Reset", action: onReset)
-                        .font(.system(.caption2, design: .monospaced))
+                        .font(.caption2)
                         .buttonStyle(.borderless)
                         .foregroundStyle(.secondary)
                 }

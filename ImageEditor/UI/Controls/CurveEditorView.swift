@@ -8,7 +8,8 @@ struct CurveEditorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 4 : 8) {
             Text(title)
-                .font(.system(compact ? .caption : .headline, design: .rounded, weight: .semibold))
+                .font(compact ? .caption : .headline)
+                .fontWeight(.semibold)
 
             GeometryReader { geometry in
                 ZStack {

@@ -47,7 +47,7 @@ struct EditorRootView: View {
         .overlay(alignment: .bottomTrailing) {
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
-                    .font(.system(.caption, design: .rounded))
+                    .font(.caption)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(.thinMaterial, in: Capsule())
@@ -60,9 +60,10 @@ struct EditorRootView: View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(viewModel.selectedDocument?.title ?? "Preview")
-                    .font(.system(.title3, design: .serif, weight: .bold))
+                    .font(.title3)
+                    .fontWeight(.bold)
                 Text(viewModel.selectedDocument?.asset.isRAW == true ? "RAW selected" : "Editing workspace")
-                    .font(.system(.caption, design: .monospaced))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
@@ -122,10 +123,12 @@ struct EditorRootView: View {
         } else {
             VStack(spacing: 10) {
                 Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 26, weight: .medium))
+                    .font(.title2)
+                    .fontWeight(.medium)
                     .foregroundStyle(.secondary)
                 Text("Select an image to edit")
-                    .font(.system(.title3, design: .serif, weight: .bold))
+                    .font(.title3)
+                    .fontWeight(.bold)
                 Text("The left tool column appears once an image is selected.")
                     .foregroundStyle(.secondary)
             }

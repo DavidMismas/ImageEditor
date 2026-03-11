@@ -7,7 +7,8 @@ struct BasePanelView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Primary Corrections")
-                    .font(.system(.title3, design: .serif, weight: .bold))
+                    .font(.title3)
+                    .fontWeight(.bold)
 
                 AdjustmentSlider(title: "Exposure", value: document.binding(for: \.base.exposure), range: -5...5, format: "%.2f")
                 AdjustmentSlider(title: "Contrast", value: document.binding(for: \.base.contrast), range: -100...100)
@@ -19,7 +20,8 @@ struct BasePanelView: View {
                 Divider().padding(.vertical, 2)
 
                 Text("Color Balance")
-                    .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .font(.headline)
+                    .fontWeight(.semibold)
 
                 AdjustmentSlider(title: "Temperature", value: document.binding(for: \.base.temperature), range: -100...100)
                 AdjustmentSlider(title: "Tint", value: document.binding(for: \.base.tint), range: -100...100)
