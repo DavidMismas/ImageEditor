@@ -10,15 +10,27 @@ struct RAWDecodeConfiguration: Hashable, Sendable {
     var previewDraftMode = false
     var targetLongSide: CGFloat?
     var intent: RAWDecodeIntent = .preview
+    var temperature: Double = 0
+    var tint: Double = 0
+    var enableHighlightRecovery = true
+    var enableLensCorrection = true
+    var extendedDynamicRangeAmount: Double = 2
     
     static func make(
         targetLongSide: CGFloat?,
-        intent: RAWDecodeIntent
+        intent: RAWDecodeIntent,
+        temperature: Double = 0,
+        tint: Double = 0
     ) -> RAWDecodeConfiguration {
         RAWDecodeConfiguration(
             previewDraftMode: false,
             targetLongSide: targetLongSide,
-            intent: intent
+            intent: intent,
+            temperature: temperature,
+            tint: tint,
+            enableHighlightRecovery: true,
+            enableLensCorrection: true,
+            extendedDynamicRangeAmount: 2
         )
     }
 

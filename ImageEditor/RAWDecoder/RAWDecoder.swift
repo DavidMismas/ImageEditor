@@ -30,12 +30,15 @@ actor RAWImageDecoder {
     func decode(
         asset: PhotoAsset,
         targetLongSide: CGFloat?,
-        isExport: Bool
+        isExport: Bool,
+        settings: AdjustmentSettings = AdjustmentSettings()
     ) async throws -> DecodedImage {
         if asset.isRAW {
             let configuration = RAWDecodeConfiguration.make(
                 targetLongSide: targetLongSide,
-                intent: isExport ? .export : .preview
+                intent: isExport ? .export : .preview,
+                temperature: settings.base.temperature,
+                tint: settings.base.tint
             )
             return try await decodeRAWImage(at: asset.url, configuration: configuration)
         }
@@ -80,10 +83,32 @@ actor RAWImageDecoder {
         }
 
         filter.scaleFactor = scaleFactor
-        // Keep the imported RAW visually neutral by preserving Apple's default
-        // decode look. Preview only uses scale reduction for interactivity and
-        // does not force draft mode or gamut remapping overrides.
+        // Keep Apple's default RAW rendering curve so untouched imports look
+        // natural and camera-appropriate. We still request extra dynamic range
+        // below, which preserves highlight headroom for the editor controls.
         filter.isDraftModeEnabled = configuration.previewDraftMode && scaleFactor < 0.92
+        filter.extendedDynamicRangeAmount = Float(configuration.extendedDynamicRangeAmount)
+        filter.isGamutMappingEnabled = true
+
+        if filter.isHighlightRecoverySupported {
+            filter.isHighlightRecoveryEnabled = configuration.enableHighlightRecovery
+        }
+        if filter.isLensCorrectionSupported {
+            filter.isLensCorrectionEnabled = configuration.enableLensCorrection
+        }
+
+        // RAW white balance belongs at decode time. Start from the file's
+        // metadata-derived neutral point and apply user deltas there so RAW
+        // files respond naturally instead of relying on downstream RGB hacks.
+        let defaultTemperature = filter.neutralTemperature
+        let defaultTint = filter.neutralTint
+        if configuration.temperature != 0 {
+            let adjustedTemperature = defaultTemperature + Float(configuration.temperature * 24)
+            filter.neutralTemperature = adjustedTemperature.clamped(to: 1_500...50_000)
+        }
+        if configuration.tint != 0 {
+            filter.neutralTint = (defaultTint + Float(configuration.tint * 0.9)).clamped(to: -250...250)
+        }
 
         guard let outputImage = filter.outputImage else {
             throw RAWImageDecoderError.decodeFailed(url)

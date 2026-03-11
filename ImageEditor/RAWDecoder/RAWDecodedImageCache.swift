@@ -5,12 +5,22 @@ private struct RAWDecodedImageCacheKey: Hashable, Sendable {
     let intent: RAWDecodeIntent
     let scaleBucket: Int
     let previewDraftMode: Bool
+    let temperatureBucket: Int
+    let tintBucket: Int
+    let highlightRecoveryEnabled: Bool
+    let lensCorrectionEnabled: Bool
+    let extendedDynamicRangeBucket: Int
 
     init(url: URL, configuration: RAWDecodeConfiguration) {
         self.url = url
         intent = configuration.intent
         scaleBucket = Int((configuration.targetLongSide ?? 0).rounded())
         previewDraftMode = configuration.previewDraftMode
+        temperatureBucket = Int((configuration.temperature * 10).rounded())
+        tintBucket = Int((configuration.tint * 10).rounded())
+        highlightRecoveryEnabled = configuration.enableHighlightRecovery
+        lensCorrectionEnabled = configuration.enableLensCorrection
+        extendedDynamicRangeBucket = Int((configuration.extendedDynamicRangeAmount * 100).rounded())
     }
 }
 

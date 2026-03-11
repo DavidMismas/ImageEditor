@@ -3,13 +3,7 @@ import Foundation
 
 actor HistogramGenerator {
     func generate(from image: CIImage, context: CIContext, bins: Int = HistogramData.defaultBinCount) -> HistogramData {
-        // Use the same bounded tonal domain as the preview-facing selective color/LUT
-        // stages so the histogram reads like an editing histogram instead of bunching
-        // heavily to the left from linear-light values.
-        let histogramSource = AdjustmentKernels.sceneCompress?.apply(
-            extent: image.extent,
-            arguments: [image]
-        ) ?? image
+        let histogramSource = image
 
         guard let filter = CIFilter(name: "CIAreaHistogram") else {
             return .empty

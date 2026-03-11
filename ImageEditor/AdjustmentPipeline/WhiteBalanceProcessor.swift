@@ -37,9 +37,9 @@ struct WhiteBalanceProcessor: Sendable {
     private func whiteBalanceMatrix(temperature: Float, tint: Float) -> simd_float3x3 {
         // Bradford-like LMS scaling gives temperature/tint behavior that is much closer
         // to photographic white balance than naive RGB offsets.
-        let lGain = Foundation.pow(2.0, Double((temperature * 0.22) + (tint * 0.05))).toFloat
-        let mGain = Foundation.pow(2.0, Double(-tint * 0.16)).toFloat
-        let sGain = Foundation.pow(2.0, Double((-temperature * 0.28) + (tint * 0.05))).toFloat
+        let lGain = Foundation.pow(2.0, Double((temperature * 0.34) + (tint * 0.08))).toFloat
+        let mGain = Foundation.pow(2.0, Double(-tint * 0.24)).toFloat
+        let sGain = Foundation.pow(2.0, Double((-temperature * 0.42) + (tint * 0.08))).toFloat
         let diagonal = simd_float3x3(diagonal: SIMD3<Float>(lGain, mGain, sGain))
         return lmsToRGB * diagonal * rgbToLMS
     }
@@ -49,10 +49,14 @@ struct WhiteBalanceProcessor: Sendable {
             return image
         }
 
+        let redRow = SIMD3<Float>(matrix.columns.0.x, matrix.columns.1.x, matrix.columns.2.x)
+        let greenRow = SIMD3<Float>(matrix.columns.0.y, matrix.columns.1.y, matrix.columns.2.y)
+        let blueRow = SIMD3<Float>(matrix.columns.0.z, matrix.columns.1.z, matrix.columns.2.z)
+
         filter.setValue(image, forKey: kCIInputImageKey)
-        filter.setValue(vector(from: matrix.columns.0), forKey: "inputRVector")
-        filter.setValue(vector(from: matrix.columns.1), forKey: "inputGVector")
-        filter.setValue(vector(from: matrix.columns.2), forKey: "inputBVector")
+        filter.setValue(vector(from: redRow), forKey: "inputRVector")
+        filter.setValue(vector(from: greenRow), forKey: "inputGVector")
+        filter.setValue(vector(from: blueRow), forKey: "inputBVector")
         filter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputAVector")
         filter.setValue(CIVector(x: 0, y: 0, z: 0, w: 0), forKey: "inputBiasVector")
         return filter.outputImage ?? image

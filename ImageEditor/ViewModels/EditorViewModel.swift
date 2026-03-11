@@ -23,8 +23,20 @@ final class EditorViewModel: ObservableObject {
             }
         }
     }
-    @Published var zoomScale: CGFloat = 1
-    @Published var fitToScreen = true
+    @Published var zoomScale: CGFloat = 1 {
+        didSet {
+            if abs(zoomScale - oldValue) > 0.02 {
+                requestRender()
+            }
+        }
+    }
+    @Published var fitToScreen = true {
+        didSet {
+            if fitToScreen != oldValue {
+                requestRender()
+            }
+        }
+    }
     @Published var exportFormat: ExportFormat = .jpeg
     @Published var outputColorSpace: OutputColorSpaceOption = .displayP3
     @Published var jpegQuality: Double = 92
@@ -105,6 +117,8 @@ final class EditorViewModel: ObservableObject {
         savePanel.allowedContentTypes = [exportFormat.utType]
         savePanel.canCreateDirectories = true
         savePanel.title = "Export Image"
+        savePanel.prompt = "Export"
+        savePanel.directoryURL = document.asset.url.deletingLastPathComponent()
         savePanel.nameFieldStringValue = exportFilename(for: document)
 
         guard savePanel.runModal() == .OK, var destinationURL = savePanel.url else {
@@ -249,7 +263,8 @@ final class EditorViewModel: ObservableObject {
                     settings: request.settings,
                     presets: request.presets,
                     targetSize: request.targetSize,
-                    previewMode: request.previewMode
+                    previewMode: request.previewMode,
+                    fullResolutionPreview: request.fullResolutionPreview
                 )
 
                 guard selectedDocumentID == request.asset.id else {
@@ -293,7 +308,11 @@ final class EditorViewModel: ObservableObject {
             settings: document.settings,
             presets: importedLUTLookup,
             previewMode: previewMode,
-            targetSize: previewSize
+            targetSize: CGSize(
+                width: previewSize.width * max(zoomScale, 1),
+                height: previewSize.height * max(zoomScale, 1)
+            ),
+            fullResolutionPreview: !fitToScreen && zoomScale >= 1
         )
     }
 }
@@ -305,4 +324,5 @@ private struct RenderRequest {
     let presets: [UUID: LUTPreset]
     let previewMode: PreviewMode
     let targetSize: CGSize
+    let fullResolutionPreview: Bool
 }

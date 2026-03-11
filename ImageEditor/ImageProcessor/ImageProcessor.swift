@@ -9,6 +9,7 @@ struct PreviewCacheKey: Hashable, Sendable {
     let previewMode: PreviewMode
     let widthBucket: Int
     let heightBucket: Int
+    let fullResolutionPreview: Bool
 }
 
 struct PreviewRenderResult: @unchecked Sendable {
@@ -34,7 +35,8 @@ actor ImageProcessor {
         settings: AdjustmentSettings,
         presets: [UUID: LUTPreset],
         targetSize: CGSize,
-        previewMode: PreviewMode
+        previewMode: PreviewMode,
+        fullResolutionPreview: Bool
     ) async throws -> PreviewRenderResult {
         let safeTargetSize = CGSize(
             width: max(targetSize.width, 800),
@@ -45,7 +47,8 @@ actor ImageProcessor {
             settings: settings,
             previewMode: previewMode,
             widthBucket: Int(safeTargetSize.width / 32),
-            heightBucket: Int(safeTargetSize.height / 32)
+            heightBucket: Int(safeTargetSize.height / 32),
+            fullResolutionPreview: fullResolutionPreview
         )
 
         if let cached = await previewCache.value(for: cacheKey) {
@@ -54,8 +57,9 @@ actor ImageProcessor {
 
         let editedDecoded = try await decoder.decode(
             asset: asset,
-            targetLongSide: safeTargetSize.longestSide * 1.8,
-            isExport: false
+            targetLongSide: fullResolutionPreview ? nil : safeTargetSize.longestSide * 1.8,
+            isExport: false,
+            settings: settings
         )
 
         let editedImage = await pipeline.renderEdited(
@@ -69,8 +73,9 @@ actor ImageProcessor {
         if asset.isRAW, previewMode != .edited {
             let referenceDecoded = try await decoder.decode(
                 asset: asset,
-                targetLongSide: safeTargetSize.longestSide * 1.8,
-                isExport: false
+                targetLongSide: fullResolutionPreview ? nil : safeTargetSize.longestSide * 1.8,
+                isExport: false,
+                settings: AdjustmentSettings()
             )
             referenceSource = referenceDecoded.image
         } else {
@@ -113,7 +118,12 @@ actor ImageProcessor {
             return nil
         }
 
-        return renderNSImage(from: decoded.image, colorSpace: ColorPipeline.sRGB)
+        let displayImage = await pipeline.renderReference(
+            from: decoded.image,
+            settings: AdjustmentSettings()
+        )
+
+        return renderNSImage(from: displayImage, colorSpace: ColorPipeline.sRGB)
     }
 
     func export(
@@ -126,7 +136,8 @@ actor ImageProcessor {
         let decoded = try await decoder.decode(
             asset: asset,
             targetLongSide: nil,
-            isExport: true
+            isExport: true,
+            settings: settings
         )
 
         let editedImage = await pipeline.renderEdited(
