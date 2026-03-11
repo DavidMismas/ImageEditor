@@ -62,6 +62,22 @@ enum ProcessingMath {
         return simd.max(oklabInverse * SIMD3<Float>(l3, m3, s3), SIMD3<Float>(repeating: 0))
     }
 
+    static func linearToSRGB(_ color: SIMD3<Float>) -> SIMD3<Float> {
+        SIMD3<Float>(
+            linearToSRGB(color.x),
+            linearToSRGB(color.y),
+            linearToSRGB(color.z)
+        )
+    }
+
+    static func sRGBToLinear(_ color: SIMD3<Float>) -> SIMD3<Float> {
+        SIMD3<Float>(
+            sRGBToLinear(color.x),
+            sRGBToLinear(color.y),
+            sRGBToLinear(color.z)
+        )
+    }
+
     static func oklabToLCh(_ lab: SIMD3<Float>) -> SIMD3<Float> {
         let chroma = sqrt(lab.y * lab.y + lab.z * lab.z)
         let hue = wrapDegrees(atan2(lab.z, lab.y) * 180 / .pi)
@@ -123,6 +139,24 @@ enum ProcessingMath {
         return value > 0
             ? Foundation.pow(Double(value), 1.0 / 3.0).toFloat
             : -Foundation.pow(Double(-value), 1.0 / 3.0).toFloat
+    }
+
+    private static func linearToSRGB(_ value: Float) -> Float {
+        let clamped = max(value, 0)
+        if clamped <= 0.0031308 {
+            return clamped * 12.92
+        }
+
+        return (1.055 * Foundation.pow(Double(clamped), 1.0 / 2.4).toFloat) - 0.055
+    }
+
+    private static func sRGBToLinear(_ value: Float) -> Float {
+        let clamped = value.clamped(to: 0...1)
+        if clamped <= 0.04045 {
+            return clamped / 12.92
+        }
+
+        return Foundation.pow(Double((clamped + 0.055) / 1.055), 2.4).toFloat
     }
 }
 

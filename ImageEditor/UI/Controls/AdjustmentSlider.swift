@@ -168,13 +168,12 @@ struct HSLHueAdjustmentSlider: View {
     }
 
     private var gradient: LinearGradient {
-        let center = Double(channel.hueCenter)
-        let span = Double(channel.hueWidth) * 1.35
-        let stops = stride(from: 0.0, through: 1.0, by: 1.0 / 12.0).map { location in
-            let hue = center - span + (span * 2 * location)
+        let hues = channel.previewGradientHues
+        let denominator = max(Double(hues.count - 1), 1)
+        let stops = hues.enumerated().map { index, hue in
             return Gradient.Stop(
                 color: previewColor(forHueDegrees: hue),
-                location: location
+                location: Double(index) / denominator
             )
         }
 
@@ -185,8 +184,13 @@ struct HSLHueAdjustmentSlider: View {
         )
     }
 
+    private func normalizedHue(_ degrees: Double) -> Double {
+        let wrapped = degrees.truncatingRemainder(dividingBy: 360)
+        return wrapped >= 0 ? wrapped : wrapped + 360
+    }
+
     private func previewColor(forHueDegrees degrees: Double) -> Color {
-        let hueUnit = ((degrees.truncatingRemainder(dividingBy: 360)) + 360).truncatingRemainder(dividingBy: 360) / 360
+        let hueUnit = normalizedHue(degrees) / 360
         let preview = ColorWheelMath.hueToPreviewRGB(hueUnit)
         return Color(
             .sRGBLinear,
@@ -206,27 +210,30 @@ private struct ContinuousSlider: NSViewRepresentable {
         Coordinator(value: $value)
     }
 
-    func makeNSView(context: Context) -> NSSlider {
-        let slider = NSSlider(
-            value: value,
-            minValue: range.lowerBound,
-            maxValue: range.upperBound,
-            target: context.coordinator,
-            action: #selector(Coordinator.valueChanged(_:))
-        )
+    func makeNSView(context: Context) -> QuietNSSlider {
+        let slider = QuietNSSlider()
+        slider.suppressAction = true
+        slider.minValue = range.lowerBound
+        slider.maxValue = range.upperBound
+        slider.doubleValue = value
         slider.isContinuous = true
         slider.controlSize = .small
+        slider.target = context.coordinator
+        slider.action = #selector(Coordinator.valueChanged(_:))
+        slider.suppressAction = false
         return slider
     }
 
-    func updateNSView(_ slider: NSSlider, context: Context) {
+    func updateNSView(_ slider: QuietNSSlider, context: Context) {
         context.coordinator.value = $value
+        slider.suppressAction = true
         slider.minValue = range.lowerBound
         slider.maxValue = range.upperBound
 
         if abs(slider.doubleValue - value) > 0.0001 {
             slider.doubleValue = value
         }
+        slider.suppressAction = false
     }
 
     final class Coordinator: NSObject {
@@ -239,6 +246,18 @@ private struct ContinuousSlider: NSViewRepresentable {
         @objc func valueChanged(_ sender: NSSlider) {
             value.wrappedValue = sender.doubleValue
         }
+    }
+}
+
+private final class QuietNSSlider: NSSlider {
+    var suppressAction = false
+
+    override func sendAction(_ action: Selector?, to target: Any?) -> Bool {
+        guard !suppressAction else {
+            return false
+        }
+
+        return super.sendAction(action, to: target)
     }
 }
 

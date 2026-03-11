@@ -161,6 +161,27 @@ enum HSLChannelKind: String, CaseIterable, Identifiable, Codable, Sendable {
             return 34
         }
     }
+
+    var previewGradientHues: [Double] {
+        switch self {
+        case .red:
+            return [304, 340, 0, 28, 52]
+        case .orange:
+            return [350, 18, 35, 54, 74]
+        case .yellow:
+            return [22, 42, 62, 96, 124]
+        case .green:
+            return [28, 72, 130, 184, 224]
+        case .aqua:
+            return [108, 150, 185, 214, 238]
+        case .blue:
+            return [176, 214, 242, 278, 308]
+        case .purple:
+            return [224, 258, 278, 304, 330]
+        case .magenta:
+            return [266, 300, 322, 344, 18]
+        }
+    }
 }
 
 extension Comparable {

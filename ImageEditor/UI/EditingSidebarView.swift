@@ -12,6 +12,7 @@ struct EditingSidebarView: View {
     @State private var gradingExpanded = true
     @State private var hslExpanded = false
     @State private var curvesExpanded = false
+    @State private var selectedCurveChannel: CurveChannelKind = .luma
     @State private var effectsExpanded = false
     @State private var lutExpanded = false
 
@@ -98,7 +99,7 @@ struct EditingSidebarView: View {
 
                 InspectorSection(
                     title: "Curves",
-                    subtitle: "All four curves in one compact row.",
+                    subtitle: "Shape one channel at a time.",
                     isExpanded: $curvesExpanded,
                     onReset: {
                         document.updateSettings { $0.color.curves = ColorCurveSettings() }
@@ -229,17 +230,19 @@ struct EditingSidebarView: View {
     }
 
     private var curveControls: some View {
-        HStack(alignment: .top, spacing: 8) {
-            CurveEditorView(title: "L", curve: document.binding(for: \.color.curves.luma), compact: true)
-            CurveEditorView(title: "R", curve: document.binding(for: \.color.curves.red), compact: true)
-            CurveEditorView(title: "G", curve: document.binding(for: \.color.curves.green), compact: true)
-            CurveEditorView(title: "B", curve: document.binding(for: \.color.curves.blue), compact: true)
+        VStack(alignment: .leading, spacing: 10) {
+            CurveChannelTabs(selection: $selectedCurveChannel, usesShortLabels: true)
+            CurveEditorView(
+                title: nil,
+                curve: document.binding(for: selectedCurveChannel.settingsKeyPath),
+                accentColor: selectedCurveChannel.accentColor
+            )
         }
     }
 
     private var effectsControls: some View {
         VStack(alignment: .leading, spacing: 10) {
-            AdjustmentSlider(title: "Clarity", value: document.binding(for: \.effects.clarity), range: 0...100)
+            AdjustmentSlider(title: "Clarity", value: document.binding(for: \.effects.clarity), range: -100...100)
             AdjustmentSlider(title: "Sharpness", value: document.binding(for: \.effects.sharpness), range: 0...100)
             AdjustmentSlider(title: "Grain", value: document.binding(for: \.effects.grain), range: 0...100)
             AdjustmentSlider(title: "Vignette", value: document.binding(for: \.effects.vignette), range: 0...100)

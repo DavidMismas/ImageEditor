@@ -10,9 +10,9 @@ struct VignetteProcessor: Sendable {
         let normalizedAmount = amount.clamped(to: 0...100) / 100
         filter.setValue(image, forKey: kCIInputImageKey)
         filter.setValue(CIVector(x: image.extent.midX, y: image.extent.midY), forKey: kCIInputCenterKey)
-        filter.setValue(max(image.extent.width, image.extent.height) * 0.72, forKey: kCIInputRadiusKey)
-        filter.setValue(normalizedAmount * 0.9, forKey: kCIInputIntensityKey)
-        filter.setValue(0.7, forKey: "inputFalloff")
+        filter.setValue(max(image.extent.width, image.extent.height) * 0.70, forKey: kCIInputRadiusKey)
+        filter.setValue(normalizedAmount * 1.05, forKey: kCIInputIntensityKey)
+        filter.setValue(0.72, forKey: "inputFalloff")
         return filter.outputImage ?? image
     }
 }

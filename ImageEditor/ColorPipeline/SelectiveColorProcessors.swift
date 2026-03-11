@@ -62,11 +62,21 @@ struct HSLProcessor: Sendable {
         }
 
         var adjusted = lch
+        let normalizedSaturation = (saturationDelta / totalWeight).clamped(to: -1...1)
         adjusted.y = ProcessingMath.wrapDegrees(adjusted.y + (hueDelta / totalWeight))
-        adjusted.z *= Foundation.pow(2.0, Double((saturationDelta / totalWeight) * 0.9)).toFloat
+        adjusted.z *= saturationScale(for: normalizedSaturation)
         adjusted.x = (adjusted.x + (luminanceDelta / totalWeight) * 0.18 * chromaGate).clamped(to: 0...1)
         adjusted.z = max(adjusted.z, 0)
         return adjusted
+    }
+
+    private func saturationScale(for amount: Float) -> Float {
+        if amount <= 0 {
+            // Match pro HSL behavior: -100 can fully neutralize the targeted hue family.
+            return max(0, 1 + amount)
+        }
+
+        return Foundation.pow(2.0, Double(amount * 0.9)).toFloat
     }
 }
 
@@ -128,13 +138,24 @@ struct CurveProcessor: Sendable {
 
     func apply(to color: SIMD3<Float>) -> SIMD3<Float> {
         var adjusted = simd.max(color, SIMD3<Float>(repeating: 0))
-        let luminance = max(ProcessingMath.linearLuminance(adjusted), 0.0001)
-        let curvedLuminance = lumaCurve.sample(luminance.clamped(to: 0...1))
-        adjusted *= curvedLuminance / luminance
 
-        adjusted.x = redCurve.sample(adjusted.x.clamped(to: 0...1))
-        adjusted.y = greenCurve.sample(adjusted.y.clamped(to: 0...1))
-        adjusted.z = blueCurve.sample(adjusted.z.clamped(to: 0...1))
+        // Apply the master curve in perceptual lightness space so the right side of
+        // the graph meaningfully controls highlights instead of only scaling luminance.
+        var lab = ProcessingMath.linearSRGBToOklab(adjusted)
+        lab.x = lumaCurve.sample(lab.x.clamped(to: 0...1))
+        adjusted = ProcessingMath.oklabToLinearSRGB(lab)
+
+        // RGB curves behave more like pro editors when the channel mapping happens in
+        // display-encoded space, especially in the bright end of the range.
+        var encoded = simd_clamp(
+            ProcessingMath.linearToSRGB(adjusted),
+            SIMD3<Float>(repeating: 0),
+            SIMD3<Float>(repeating: 1)
+        )
+        encoded.x = redCurve.sample(encoded.x)
+        encoded.y = greenCurve.sample(encoded.y)
+        encoded.z = blueCurve.sample(encoded.z)
+        adjusted = ProcessingMath.sRGBToLinear(encoded)
         return simd.max(adjusted, SIMD3<Float>(repeating: 0))
     }
 }

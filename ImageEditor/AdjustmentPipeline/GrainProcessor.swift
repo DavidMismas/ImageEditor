@@ -9,6 +9,7 @@ struct GrainProcessor: Sendable {
         }
 
         let normalizedAmount = Float(amount.clamped(to: 0...100) / 100)
+        let tunedAmount = min(normalizedAmount * 1.2, 1.25)
         let longSide = max(image.extent.size.longestSide, 1)
         let scale = CGFloat(max(0.22, min(0.9, 1400 / longSide)))
 
@@ -29,7 +30,7 @@ struct GrainProcessor: Sendable {
 
         return AdjustmentKernels.grain?.apply(
             extent: image.extent,
-            arguments: [image, randomA, randomB, normalizedAmount]
+            arguments: [image, randomA, randomB, tunedAmount]
         ) ?? image
     }
 }

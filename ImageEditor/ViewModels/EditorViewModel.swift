@@ -16,13 +16,6 @@ final class EditorViewModel: ObservableObject {
     @Published var previewImage: NSImage?
     @Published var comparisonImage: NSImage?
     @Published var histogram: HistogramData = .empty
-    @Published var previewSize = CGSize(width: 1280, height: 820) {
-        didSet {
-            if abs(previewSize.width - oldValue.width) > 12 || abs(previewSize.height - oldValue.height) > 12 {
-                requestRender()
-            }
-        }
-    }
     @Published var zoomScale: CGFloat = 1 {
         didSet {
             if abs(zoomScale - oldValue) > 0.02 {
@@ -52,6 +45,7 @@ final class EditorViewModel: ObservableObject {
     private var renderTask: Task<Void, Never>?
     private var renderRequestPending = false
     private var requestedRenderRevision: UInt64 = 0
+    private var previewSize = CGSize(width: 1280, height: 820)
 
     private static var adjustmentClipboard: AdjustmentSettings?
 
@@ -182,7 +176,13 @@ final class EditorViewModel: ObservableObject {
     }
 
     func setPreviewSize(_ size: CGSize) {
-        previewSize = size
+        let normalizedSize = CGSize(width: size.width.rounded(), height: size.height.rounded())
+        guard abs(normalizedSize.width - previewSize.width) > 12 || abs(normalizedSize.height - previewSize.height) > 12 else {
+            return
+        }
+
+        previewSize = normalizedSize
+        requestRender()
     }
 
     private func observe(_ document: PhotoDocument) {

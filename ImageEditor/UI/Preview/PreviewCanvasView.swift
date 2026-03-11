@@ -11,62 +11,97 @@ struct PreviewCanvasView: View {
     let onSizeChange: (CGSize) -> Void
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                LinearGradient(
-                    colors: [Color(red: 0.08, green: 0.10, blue: 0.14), Color(red: 0.04, green: 0.05, blue: 0.08)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+        ZStack {
+            LinearGradient(
+                colors: [Color(red: 0.08, green: 0.10, blue: 0.14), Color(red: 0.04, green: 0.05, blue: 0.08)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
 
-                Color.clear
-                    .task(id: geometry.size) {
-                        await MainActor.run {
-                            onSizeChange(geometry.size)
-                        }
-                    }
+            PreviewSizeObserver(onSizeChange: onSizeChange)
+                .allowsHitTesting(false)
 
-                switch mode {
-                case .split:
-                    VStack(spacing: 12) {
-                        PreviewImageSurface(
-                            title: "Before",
-                            image: comparisonImage,
-                            zoomScale: zoomScale,
-                            fitToScreen: fitToScreen
-                        )
-                        PreviewImageSurface(
-                            title: "Edited",
-                            image: primaryImage,
-                            zoomScale: zoomScale,
-                            fitToScreen: fitToScreen
-                        )
-                    }
-                    .padding(12)
-                case .edited:
-                    PreviewImageSurface(
-                        title: nil,
-                        image: primaryImage,
-                        zoomScale: zoomScale,
-                        fitToScreen: fitToScreen
-                    )
-                    .padding(12)
-                case .before:
+            switch mode {
+            case .split:
+                VStack(spacing: 12) {
                     PreviewImageSurface(
                         title: "Before",
+                        image: comparisonImage,
+                        zoomScale: zoomScale,
+                        fitToScreen: fitToScreen
+                    )
+                    PreviewImageSurface(
+                        title: "Edited",
                         image: primaryImage,
                         zoomScale: zoomScale,
                         fitToScreen: fitToScreen
                     )
-                    .padding(12)
                 }
+                .padding(12)
+            case .edited:
+                PreviewImageSurface(
+                    title: nil,
+                    image: primaryImage,
+                    zoomScale: zoomScale,
+                    fitToScreen: fitToScreen
+                )
+                .padding(12)
+            case .before:
+                PreviewImageSurface(
+                    title: "Before",
+                    image: primaryImage,
+                    zoomScale: zoomScale,
+                    fitToScreen: fitToScreen
+                )
+                .padding(12)
+            }
 
-                if isRendering && primaryImage == nil && comparisonImage == nil {
-                    ProgressView()
-                        .controlSize(.large)
-                        .padding(20)
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                }
+            if isRendering && primaryImage == nil && comparisonImage == nil {
+                ProgressView()
+                    .controlSize(.large)
+                    .padding(20)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+            }
+        }
+    }
+}
+
+private struct PreviewSizeObserver: NSViewRepresentable {
+    let onSizeChange: (CGSize) -> Void
+
+    func makeNSView(context: Context) -> ObserverView {
+        let view = ObserverView()
+        view.onSizeChange = onSizeChange
+        return view
+    }
+
+    func updateNSView(_ nsView: ObserverView, context: Context) {
+        nsView.onSizeChange = onSizeChange
+    }
+
+    final class ObserverView: NSView {
+        var onSizeChange: ((CGSize) -> Void)?
+        private var lastReportedSize = CGSize.zero
+
+        override func layout() {
+            super.layout()
+            reportIfNeeded()
+        }
+
+        override func setFrameSize(_ newSize: NSSize) {
+            super.setFrameSize(newSize)
+            reportIfNeeded()
+        }
+
+        func reportIfNeeded() {
+            let size = CGSize(width: bounds.width.rounded(), height: bounds.height.rounded())
+            guard size.width > 0, size.height > 0, size != lastReportedSize else {
+                return
+            }
+
+            lastReportedSize = size
+            DispatchQueue.main.async { [onSizeChange] in
+                onSizeChange?(size)
             }
         }
     }

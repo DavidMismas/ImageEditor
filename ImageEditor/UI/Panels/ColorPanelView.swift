@@ -3,6 +3,7 @@ import SwiftUI
 struct ColorPanelView: View {
     @ObservedObject var document: PhotoDocument
     @State private var selectedChannel: HSLChannelKind = .red
+    @State private var selectedCurveChannel: CurveChannelKind = .luma
 
     var body: some View {
         ScrollView {
@@ -40,10 +41,12 @@ struct ColorPanelView: View {
                     .font(.headline)
                     .fontWeight(.semibold)
 
-                CurveEditorView(title: "Luma Curve", curve: document.binding(for: \.color.curves.luma))
-                CurveEditorView(title: "Red Curve", curve: document.binding(for: \.color.curves.red))
-                CurveEditorView(title: "Green Curve", curve: document.binding(for: \.color.curves.green))
-                CurveEditorView(title: "Blue Curve", curve: document.binding(for: \.color.curves.blue))
+                CurveChannelTabs(selection: $selectedCurveChannel)
+                CurveEditorView(
+                    title: "\(selectedCurveChannel.label) Curve",
+                    curve: document.binding(for: selectedCurveChannel.settingsKeyPath),
+                    accentColor: selectedCurveChannel.accentColor
+                )
             }
             .padding(18)
         }
