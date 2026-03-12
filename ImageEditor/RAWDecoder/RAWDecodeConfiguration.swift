@@ -15,6 +15,8 @@ struct RAWDecodeConfiguration: Hashable, Sendable {
     var enableHighlightRecovery = true
     var enableLensCorrection = true
     var extendedDynamicRangeAmount: Double = 2
+    var luminanceNoiseReductionScale: Double = 0.55
+    var colorNoiseReductionScale: Double = 0.72
     
     static func make(
         targetLongSide: CGFloat?,
@@ -22,7 +24,20 @@ struct RAWDecodeConfiguration: Hashable, Sendable {
         temperature: Double = 0,
         tint: Double = 0
     ) -> RAWDecodeConfiguration {
-        RAWDecodeConfiguration(
+        let luminanceNoiseReductionScale: Double
+        let colorNoiseReductionScale: Double
+        switch intent {
+        case .preview:
+            luminanceNoiseReductionScale = 0.55
+            colorNoiseReductionScale = 0.72
+        case .export:
+            // Preserve more native RAW detail and color separation in the
+            // final file than in the interactive preview.
+            luminanceNoiseReductionScale = 0.28
+            colorNoiseReductionScale = 0.52
+        }
+
+        return RAWDecodeConfiguration(
             previewDraftMode: false,
             targetLongSide: targetLongSide,
             intent: intent,
@@ -30,7 +45,9 @@ struct RAWDecodeConfiguration: Hashable, Sendable {
             tint: tint,
             enableHighlightRecovery: true,
             enableLensCorrection: true,
-            extendedDynamicRangeAmount: 2
+            extendedDynamicRangeAmount: 2,
+            luminanceNoiseReductionScale: luminanceNoiseReductionScale,
+            colorNoiseReductionScale: colorNoiseReductionScale
         )
     }
 

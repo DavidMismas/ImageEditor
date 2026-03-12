@@ -59,9 +59,11 @@ actor ImageProcessor {
             return cached
         }
 
+        let previewLongSideMultiplier: CGFloat = asset.isRAW ? 2.6 : 1.8
+
         let editedDecoded = try await decoder.decode(
             asset: asset,
-            targetLongSide: fullResolutionPreview ? nil : safeTargetSize.longestSide * 1.8,
+            targetLongSide: fullResolutionPreview ? nil : safeTargetSize.longestSide * previewLongSideMultiplier,
             isExport: false,
             settings: settings
         )
@@ -71,7 +73,8 @@ actor ImageProcessor {
             asset: asset,
             settings: settings,
             presets: presets,
-            quality: .preview
+            quality: .preview,
+            geometryStage: .full
         )
         let cropSourceImage: CIImage? = if includeCropSource {
             await pipeline.renderEdited(
@@ -80,7 +83,7 @@ actor ImageProcessor {
                 settings: settings,
                 presets: presets,
                 quality: .preview,
-                includeCrop: false
+                geometryStage: .orientedPreview
             )
         } else {
             nil
@@ -89,7 +92,7 @@ actor ImageProcessor {
         if asset.isRAW, previewMode != .edited {
             let referenceDecoded = try await decoder.decode(
                 asset: asset,
-                targetLongSide: fullResolutionPreview ? nil : safeTargetSize.longestSide * 1.8,
+                targetLongSide: fullResolutionPreview ? nil : safeTargetSize.longestSide * previewLongSideMultiplier,
                 isExport: false,
                 settings: AdjustmentSettings()
             )
@@ -97,7 +100,11 @@ actor ImageProcessor {
         } else {
             referenceSource = editedDecoded.image
         }
-        let referenceImage = await pipeline.renderReference(from: referenceSource, settings: settings)
+        let referenceImage = await pipeline.renderReference(
+            from: referenceSource,
+            settings: settings,
+            geometryStage: .full
+        )
 
         let primaryCIImage: CIImage
         let comparisonCIImage: CIImage?
@@ -137,7 +144,8 @@ actor ImageProcessor {
 
         let displayImage = await pipeline.renderReference(
             from: decoded.image,
-            settings: AdjustmentSettings()
+            settings: AdjustmentSettings(),
+            geometryStage: .full
         )
 
         return renderNSImage(from: displayImage, colorSpace: ColorPipeline.sRGB)
@@ -162,7 +170,8 @@ actor ImageProcessor {
             asset: asset,
             settings: settings,
             presets: presets,
-            quality: .export
+            quality: .export,
+            geometryStage: .full
         )
 
         try exportEngine.export(editedImage, settings: exportSettings, using: context, to: destinationURL)

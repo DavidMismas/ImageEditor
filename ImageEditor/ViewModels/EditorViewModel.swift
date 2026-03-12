@@ -33,7 +33,7 @@ final class EditorViewModel: ObservableObject {
     }
     @Published var fitToScreen = true {
         didSet {
-            if fitToScreen != oldValue {
+            if fitToScreen != oldValue, !suppressZoomRenderRequest {
                 requestRender()
             }
         }
@@ -54,6 +54,8 @@ final class EditorViewModel: ObservableObject {
     private var renderRequestPending = false
     private var requestedRenderRevision: UInt64 = 0
     private var previewSize = CGSize(width: 1280, height: 820)
+    private var pendingActualPixelZoom = false
+    private var suppressZoomRenderRequest = false
 
     private static var adjustmentClipboard: AdjustmentSettings?
 
@@ -174,13 +176,23 @@ final class EditorViewModel: ObservableObject {
     }
 
     func fitPreview() {
+        pendingActualPixelZoom = false
         fitToScreen = true
         zoomScale = 1
     }
 
     func zoomToActualPixels() {
-        fitToScreen = false
         zoomScale = 1
+        pendingActualPixelZoom = true
+        requestRender()
+    }
+
+    func toggleActualPixelsZoom() {
+        if !fitToScreen, abs(zoomScale - 1) < 0.01 {
+            fitPreview()
+        } else {
+            zoomToActualPixels()
+        }
     }
 
     func setPreviewSize(_ size: CGSize) {
@@ -289,6 +301,13 @@ final class EditorViewModel: ObservableObject {
                 comparisonImage = result.comparisonImage
                 cropPreviewImage = result.cropImage
                 histogram = result.histogram
+
+                if pendingActualPixelZoom, request.fullResolutionPreview {
+                    pendingActualPixelZoom = false
+                    suppressZoomRenderRequest = true
+                    fitToScreen = false
+                    suppressZoomRenderRequest = false
+                }
             } catch {
                 guard selectedDocumentID == request.asset.id else {
                     if requestedRenderRevision == request.revision {
@@ -323,7 +342,7 @@ final class EditorViewModel: ObservableObject {
                 width: previewSize.width * max(zoomScale, 1),
                 height: previewSize.height * max(zoomScale, 1)
             ),
-            fullResolutionPreview: !fitToScreen && zoomScale >= 1,
+            fullResolutionPreview: pendingActualPixelZoom || (!fitToScreen && zoomScale >= 1),
             includeCropSource: isCropOverlayActive
         )
     }

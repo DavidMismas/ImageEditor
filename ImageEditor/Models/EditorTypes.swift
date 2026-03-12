@@ -84,8 +84,6 @@ enum ExportFormat: String, CaseIterable, Identifiable, Sendable {
 }
 
 enum CropAspectPreset: String, CaseIterable, Identifiable, Codable, Sendable {
-    case original = "Original"
-    case free = "Free"
     case square1x1 = "1:1"
     case ratio3x2 = "3:2"
     case ratio4x3 = "4:3"
@@ -93,6 +91,8 @@ enum CropAspectPreset: String, CaseIterable, Identifiable, Codable, Sendable {
     case ratio16x9 = "16:9"
     case ratio21x9 = "21:9"
     case ratio9x16 = "9:16"
+    case original = "Original"
+    case free = "Free"
 
     var id: String { rawValue }
 
@@ -116,6 +116,16 @@ enum CropAspectPreset: String, CaseIterable, Identifiable, Codable, Sendable {
             return 9.0 / 16.0
         }
     }
+}
+
+enum CropOverlayPreset: String, CaseIterable, Identifiable, Codable, Sendable {
+    case none = "Off"
+    case ruleOfThirds = "Thirds"
+    case goldenRatio = "Golden"
+    case diagonal = "Diagonal"
+    case grid = "Grid"
+
+    var id: String { rawValue }
 }
 
 enum HSLChannelKind: String, CaseIterable, Identifiable, Codable, Sendable {

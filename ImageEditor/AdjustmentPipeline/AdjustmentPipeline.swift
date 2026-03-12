@@ -12,15 +12,20 @@ actor ImageAdjustmentPipeline {
     private let cubeBuilder = ColorCubeBuilder()
     private let lutEngine = LUTEngine()
 
+    enum GeometryRenderStage: Sendable {
+        case full
+        case orientedPreview
+    }
+
     func renderEdited(
         from baseImage: CIImage,
         asset: PhotoAsset,
         settings: AdjustmentSettings,
         presets: [UUID: LUTPreset],
         quality: RenderQuality,
-        includeCrop: Bool = true
+        geometryStage: GeometryRenderStage = .full
     ) async -> CIImage {
-        var image = normalizeSourceImage(applyGeometry(to: baseImage, settings: settings, includeCrop: includeCrop))
+        var image = normalizeSourceImage(applyGeometry(to: baseImage, settings: settings, stage: geometryStage))
         image = baseToneProcessor.apply(to: image, asset: asset, settings: settings)
         image = whiteBalanceProcessor.apply(to: image, asset: asset, settings: settings)
         image = await applySelectiveColorAdjustments(to: image, settings: settings, quality: quality)
@@ -32,8 +37,12 @@ actor ImageAdjustmentPipeline {
         return image
     }
 
-    func renderReference(from baseImage: CIImage, settings: AdjustmentSettings, includeCrop: Bool = true) -> CIImage {
-        normalizeSourceImage(applyGeometry(to: baseImage, settings: settings, includeCrop: includeCrop))
+    func renderReference(
+        from baseImage: CIImage,
+        settings: AdjustmentSettings,
+        geometryStage: GeometryRenderStage = .full
+    ) -> CIImage {
+        normalizeSourceImage(applyGeometry(to: baseImage, settings: settings, stage: geometryStage))
     }
 
     private func normalizeSourceImage(_ image: CIImage) -> CIImage {
@@ -80,29 +89,47 @@ actor ImageAdjustmentPipeline {
         ) ?? boundedOutput
     }
 
-    private func applyGeometry(to image: CIImage, settings: AdjustmentSettings, includeCrop: Bool) -> CIImage {
+    private func applyGeometry(
+        to image: CIImage,
+        settings: AdjustmentSettings,
+        stage: GeometryRenderStage
+    ) -> CIImage {
         let crop = settings.crop
-        let sourceExtent = image.extent
-        let center = CGPoint(x: sourceExtent.midX, y: sourceExtent.midY)
-        let angle = CGFloat((Double(crop.rotationQuarterTurns) * 90 + crop.straighten) * .pi / 180)
-
-        var transform = CGAffineTransform.identity
-        transform = transform.translatedBy(x: center.x, y: center.y)
-        transform = transform.scaledBy(
-            x: crop.flipHorizontal ? -1 : 1,
-            y: crop.flipVertical ? -1 : 1
-        )
-        transform = transform.rotated(by: angle)
-        transform = transform.translatedBy(x: -center.x, y: -center.y)
-
-        let transformed = image.transformed(by: transform)
-        let transformedExtent = transformed.extent.integral
-        guard includeCrop else {
-            return transformed
+        let oriented = applyOrientation(to: image, crop: crop)
+        guard stage == .full else {
+            return oriented
         }
 
-        let cropRect = CropMath.cropRect(for: transformedExtent, crop: crop)
-        return transformed.cropped(to: cropRect)
+        let baseCropRect = CropMath.cropRect(for: oriented.extent, crop: crop, flipY: true)
+        let aspectRatio = CropMath.aspectRatio(for: crop.aspectPreset, in: oriented.extent.size)
+        let cropRect = CropMath.fittedRectInsideCoverage(
+            from: baseCropRect,
+            extent: oriented.extent,
+            straightenDegrees: crop.straighten,
+            aspectRatio: aspectRatio,
+            minimumLength: 36
+        )
+
+        guard abs(crop.straighten) > 0.0001 else {
+            return oriented.cropped(to: cropRect)
+        }
+
+        let center = CGPoint(x: oriented.extent.midX, y: oriented.extent.midY)
+        var straightenTransform = CGAffineTransform.identity
+        straightenTransform = straightenTransform.translatedBy(x: center.x, y: center.y)
+        straightenTransform = straightenTransform.rotated(by: CGFloat(crop.straighten * .pi / 180))
+        straightenTransform = straightenTransform.translatedBy(x: -center.x, y: -center.y)
+
+        let straightened = oriented
+            .clampedToExtent()
+            .transformed(by: straightenTransform)
+
+        return straightened.cropped(to: cropRect)
+    }
+
+    private func applyOrientation(to image: CIImage, crop: CropSettings) -> CIImage {
+        let transform = CropMath.orientationTransform(for: image.extent, crop: crop)
+        return image.transformed(by: transform)
     }
 }
 

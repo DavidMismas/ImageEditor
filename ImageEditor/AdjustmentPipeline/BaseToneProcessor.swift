@@ -88,7 +88,7 @@ struct BaseToneProcessor: Sendable {
 
         return AdjustmentKernels.highlightColorProtect?.apply(
             extent: expanded.extent,
-            arguments: [expanded, chromaProtection]
+            arguments: [image, expanded, chromaProtection]
         ) ?? expanded
     }
 }

@@ -14,4 +14,11 @@ struct HistogramData: Hashable, Sendable {
         blue: Array(repeating: 0, count: defaultBinCount),
         luma: Array(repeating: 0, count: defaultBinCount)
     )
+
+    var isEmpty: Bool {
+        red.allSatisfy { $0 == 0 }
+            && green.allSatisfy { $0 == 0 }
+            && blue.allSatisfy { $0 == 0 }
+            && luma.allSatisfy { $0 == 0 }
+    }
 }

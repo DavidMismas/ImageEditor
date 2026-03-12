@@ -133,11 +133,14 @@ private struct PreviewImageSurface: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let renderedSize = image.map { displaySize(for: $0.size, in: geometry.size) } ?? .zero
+            let renderedSize = image.map {
+                cropSettings == nil
+                    ? displaySize(for: $0.size, in: geometry.size)
+                    : cropDisplaySize(for: $0.size, in: geometry.size)
+            } ?? .zero
 
             if cropSettings != nil {
                 surfaceContent(renderedSize: renderedSize, containerSize: geometry.size)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView([.horizontal, .vertical]) {
                     surfaceContent(renderedSize: renderedSize, containerSize: geometry.size)
@@ -157,17 +160,17 @@ private struct PreviewImageSurface: View {
                 }
 
             if let image {
-                ZStack {
-                    Image(nsImage: image)
-                        .resizable()
-                        .interpolation(.high)
-                        .frame(width: renderedSize.width, height: renderedSize.height)
-                        .shadow(color: .black.opacity(0.35), radius: 16, y: 10)
-
+                Group {
                     if let cropSettings, let onCropChange {
-                        CropOverlayView(crop: cropSettings, onCropChange: onCropChange)
+                        CropEditingSurface(image: image, crop: cropSettings, onCropChange: onCropChange)
+                    } else {
+                        Image(nsImage: image)
+                            .resizable()
+                            .interpolation(.high)
                     }
                 }
+                .frame(width: renderedSize.width, height: renderedSize.height)
+                .shadow(color: .black.opacity(0.35), radius: 16, y: 10)
                 .frame(width: renderedSize.width, height: renderedSize.height)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(14)
@@ -210,93 +213,147 @@ private struct PreviewImageSurface: View {
             height: max(container.height - 28, 120)
         )
         let fitScale = min(paddedContainer.width / imageSize.width, paddedContainer.height / imageSize.height)
-        let appliedScale: CGFloat
-        if cropSettings != nil {
-            appliedScale = max(fitScale, 0.1)
-        } else {
-            let baseScale = fitToScreen ? fitScale : 1
-            appliedScale = max(baseScale * zoomScale, 0.1)
+        let baseScale = fitToScreen ? fitScale : 1
+        let appliedScale = max(baseScale * zoomScale, 0.1)
+        return CGSize(width: imageSize.width * appliedScale, height: imageSize.height * appliedScale)
+    }
+
+    private func cropDisplaySize(for imageSize: CGSize, in container: CGSize) -> CGSize {
+        guard imageSize.width > 0, imageSize.height > 0 else {
+            return .zero
         }
+
+        let paddedContainer = CGSize(
+            width: max(container.width - 28, 120),
+            height: max(container.height - 28, 120)
+        )
+        let fitScale = min(paddedContainer.width / imageSize.width, paddedContainer.height / imageSize.height)
+        let appliedScale = max(fitScale, 0.1)
         return CGSize(width: imageSize.width * appliedScale, height: imageSize.height * appliedScale)
     }
 }
 
-private struct CropOverlayView: View {
+private struct CropEditingSurface: View {
+    let image: NSImage
     let crop: CropSettings
     let onCropChange: (CropSettings) -> Void
 
+    @State private var workingCrop: CropSettings
     @State private var dragState: CropDragState?
 
     private let minCropLength: CGFloat = 72
-    private let handleHitSize: CGFloat = 26
-    private let cornerHandleSize: CGFloat = 14
-    private let edgeHandleLength: CGFloat = 34
+    private let handleHitSize: CGFloat = 64
+    private let cornerHandleSize: CGFloat = 20
+
+    init(image: NSImage, crop: CropSettings, onCropChange: @escaping (CropSettings) -> Void) {
+        self.image = image
+        self.crop = crop
+        self.onCropChange = onCropChange
+        _workingCrop = State(initialValue: crop)
+    }
 
     var body: some View {
         GeometryReader { geometry in
-            let bounds = CGRect(origin: .zero, size: geometry.size)
-            let cropRect = CropMath.cropRect(for: bounds, crop: crop)
+            let canvasBounds = CGRect(origin: .zero, size: geometry.size)
+            let imageBounds = canvasBounds.insetBy(dx: handleHitSize / 2, dy: handleHitSize / 2)
+            let activeFrameRect = resolvedFrameRect(in: imageBounds)
 
             ZStack {
-                Path { path in
-                    path.addRect(bounds)
-                    path.addRect(cropRect)
-                }
-                .fill(Color.black.opacity(0.44), style: FillStyle(eoFill: true))
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: imageBounds.width, height: imageBounds.height)
+                    .rotationEffect(.degrees(workingCrop.straighten))
+                    .position(x: imageBounds.midX, y: imageBounds.midY)
 
-                thirdsGrid(in: cropRect)
-                    .stroke(Color.white.opacity(0.18), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                Path { path in
+                    path.addRect(canvasBounds)
+                    path.addRect(activeFrameRect)
+                }
+                .fill(Color.black.opacity(0.46), style: FillStyle(eoFill: true))
+
+                CropOverlayGuides(style: workingCrop.overlay)
+                    .stroke(Color.white.opacity(0.22), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                    .frame(width: activeFrameRect.width, height: activeFrameRect.height)
+                    .position(x: activeFrameRect.midX, y: activeFrameRect.midY)
 
                 Rectangle()
                     .strokeBorder(Color.white.opacity(0.95), lineWidth: 1.5)
-                    .frame(width: cropRect.width, height: cropRect.height)
-                    .position(x: cropRect.midX, y: cropRect.midY)
+                    .frame(width: activeFrameRect.width, height: activeFrameRect.height)
+                    .position(x: activeFrameRect.midX, y: activeFrameRect.midY)
 
-                // Drag inside the crop to reposition it.
-                Color.clear
+                cornerMarker(for: .topLeft, frameRect: activeFrameRect)
+                cornerMarker(for: .topRight, frameRect: activeFrameRect)
+                cornerMarker(for: .bottomLeft, frameRect: activeFrameRect)
+                cornerMarker(for: .bottomRight, frameRect: activeFrameRect)
+
+                Rectangle()
+                    .fill(Color.white.opacity(0.001))
                     .contentShape(Rectangle())
-                    .frame(width: max(cropRect.width - handleHitSize * 2, 24), height: max(cropRect.height - handleHitSize * 2, 24))
-                    .position(x: cropRect.midX, y: cropRect.midY)
-                    .highPriorityGesture(dragGesture(for: .move, cropRect: cropRect, bounds: bounds))
-
-                handleHitArea(for: .top, cropRect: cropRect, bounds: bounds)
-                handleHitArea(for: .bottom, cropRect: cropRect, bounds: bounds)
-                handleHitArea(for: .left, cropRect: cropRect, bounds: bounds)
-                handleHitArea(for: .right, cropRect: cropRect, bounds: bounds)
-                handleHitArea(for: .topLeft, cropRect: cropRect, bounds: bounds)
-                handleHitArea(for: .topRight, cropRect: cropRect, bounds: bounds)
-                handleHitArea(for: .bottomLeft, cropRect: cropRect, bounds: bounds)
-                handleHitArea(for: .bottomRight, cropRect: cropRect, bounds: bounds)
+                    .frame(width: canvasBounds.width, height: canvasBounds.height)
+                    .gesture(unifiedDragGesture(frameRect: activeFrameRect, bounds: imageBounds))
+                    .zIndex(10)
+            }
+            .onAppear {
+                synchronizeState(with: crop, bounds: imageBounds)
+            }
+            .onChange(of: crop) { _, newCrop in
+                synchronizeState(with: newCrop, bounds: imageBounds)
             }
         }
     }
 
-    private func handleHitArea(for handle: CropHandle, cropRect: CGRect, bounds: CGRect) -> some View {
-        let position = handle.position(in: cropRect, inset: 10)
-        let hitSize = handle.hitSize(handleHitSize: handleHitSize, edgeHandleLength: edgeHandleLength)
-        let markerSize = handle.markerSize(cornerHandleSize: cornerHandleSize, edgeHandleLength: edgeHandleLength)
+    private func resolvedFrameRect(in bounds: CGRect) -> CGRect {
+        let baseRect = CropMath.cropRect(for: bounds, crop: workingCrop, minimumLength: minCropLength)
+        let aspectRatio = CropMath.aspectRatio(for: workingCrop.aspectPreset, in: bounds.size)
+        return CropMath.fittedRectInsideCoverage(
+            from: baseRect,
+            extent: bounds,
+            straightenDegrees: workingCrop.straighten,
+            aspectRatio: aspectRatio,
+            minimumLength: minCropLength
+        )
+    }
 
-        return ZStack {
-            marker(for: handle)
-                .frame(width: markerSize.width, height: markerSize.height)
+    private func synchronizeState(with newCrop: CropSettings, bounds: CGRect) {
+        guard bounds.width > 0, bounds.height > 0, dragState == nil else {
+            return
         }
-        .frame(width: hitSize.width, height: hitSize.height)
-        .position(position)
-        .contentShape(Rectangle())
-        .highPriorityGesture(dragGesture(for: handle, cropRect: cropRect, bounds: bounds))
+
+        let baseRect = CropMath.cropRect(for: bounds, crop: newCrop, minimumLength: minCropLength)
+        let aspectRatio = CropMath.aspectRatio(for: newCrop.aspectPreset, in: bounds.size)
+        let safeRect = CropMath.fittedRectInsideCoverage(
+            from: baseRect,
+            extent: bounds,
+            straightenDegrees: newCrop.straighten,
+            aspectRatio: aspectRatio,
+            minimumLength: minCropLength
+        )
+        let sanitizedCrop = CropMath.settings(for: safeRect, in: bounds, basedOn: newCrop)
+        workingCrop = sanitizedCrop
+
+        guard sanitizedCrop != newCrop else {
+            return
+        }
+
+        DispatchQueue.main.async {
+            onCropChange(sanitizedCrop)
+        }
+    }
+
+    private func cornerMarker(for handle: CropHandle, frameRect: CGRect) -> some View {
+        let position = handle.position(in: frameRect)
+        let markerSize = handle.markerSize(cornerHandleSize: cornerHandleSize)
+
+        return marker(for: handle)
+            .frame(width: markerSize.width, height: markerSize.height)
+            .position(position)
+            .zIndex(6)
     }
 
     private func marker(for handle: CropHandle) -> some View {
         Group {
             switch handle {
-            case .left, .right:
-                Capsule()
-                    .fill(Color.white)
-                    .frame(width: 5, height: edgeHandleLength)
-            case .top, .bottom:
-                Capsule()
-                    .fill(Color.white)
-                    .frame(width: edgeHandleLength, height: 5)
             case .move:
                 EmptyView()
             default:
@@ -304,55 +361,79 @@ private struct CropOverlayView: View {
                     .fill(Color.white)
                     .overlay {
                         Circle()
-                            .stroke(Color.black.opacity(0.18), lineWidth: 1)
+                            .stroke(Color.black.opacity(0.22), lineWidth: 1.5)
                     }
             }
         }
-        .shadow(color: .black.opacity(0.24), radius: 2, y: 1)
+        .shadow(color: .black.opacity(0.28), radius: 4, y: 1)
     }
 
-    private func dragGesture(for handle: CropHandle, cropRect: CGRect, bounds: CGRect) -> some Gesture {
+    private func unifiedDragGesture(frameRect: CGRect, bounds: CGRect) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                if dragState?.handle != handle {
-                    dragState = CropDragState(handle: handle, initialRect: cropRect)
+                if dragState == nil {
+                    guard let resolvedHandle = detectHandle(at: value.startLocation, in: frameRect) else {
+                        return
+                    }
+
+                    dragState = CropDragState(
+                        handle: resolvedHandle,
+                        initialFrameRect: frameRect,
+                        initialCrop: workingCrop
+                    )
                 }
 
-                let startingRect = dragState?.initialRect ?? cropRect
-                let aspectRatio = CropMath.aspectRatio(for: crop.aspectPreset, in: bounds.size)
-                let updatedRect = updatedRect(
+                guard let handle = dragState?.handle else {
+                    return
+                }
+
+                let startingFrameRect = dragState?.initialFrameRect ?? frameRect
+                let baseCrop = dragState?.initialCrop ?? workingCrop
+                let aspectRatio = CropMath.aspectRatio(for: baseCrop.aspectPreset, in: bounds.size)
+                let updatedFrameRect = updatedRect(
                     for: handle,
-                    initialRect: startingRect,
+                    initialRect: startingFrameRect,
                     translation: value.translation,
                     bounds: bounds,
                     aspectRatio: aspectRatio
                 )
-                let updatedCrop = CropMath.settings(for: updatedRect, in: bounds, basedOn: crop)
-                if updatedCrop != crop {
-                    onCropChange(updatedCrop)
-                }
+                let safeRect = CropMath.fittedRectInsideCoverage(
+                    from: updatedFrameRect,
+                    extent: bounds,
+                    straightenDegrees: baseCrop.straighten,
+                    aspectRatio: aspectRatio,
+                    minimumLength: minCropLength
+                )
+                workingCrop = CropMath.settings(for: safeRect, in: bounds, basedOn: baseCrop)
             }
             .onEnded { _ in
                 dragState = nil
+                if workingCrop != crop {
+                    onCropChange(workingCrop)
+                }
             }
     }
 
-    private func thirdsGrid(in rect: CGRect) -> Path {
-        Path { path in
-            guard rect.width > 0, rect.height > 0 else {
-                return
-            }
+    private func detectHandle(at location: CGPoint, in frameRect: CGRect) -> CropHandle? {
+        let threshold = handleHitSize * 0.7
+        let corners: [(CropHandle, CGPoint)] = [
+            (.topLeft, CGPoint(x: frameRect.minX, y: frameRect.minY)),
+            (.topRight, CGPoint(x: frameRect.maxX, y: frameRect.minY)),
+            (.bottomLeft, CGPoint(x: frameRect.minX, y: frameRect.maxY)),
+            (.bottomRight, CGPoint(x: frameRect.maxX, y: frameRect.maxY))
+        ]
 
-            for fraction in [CGFloat(1.0 / 3.0), CGFloat(2.0 / 3.0)] {
-                let x = rect.minX + rect.width * fraction
-                let y = rect.minY + rect.height * fraction
-
-                path.move(to: CGPoint(x: x, y: rect.minY))
-                path.addLine(to: CGPoint(x: x, y: rect.maxY))
-                path.move(to: CGPoint(x: rect.minX, y: y))
-                path.addLine(to: CGPoint(x: rect.maxX, y: y))
+        for (handle, point) in corners {
+            if hypot(location.x - point.x, location.y - point.y) <= threshold {
+                return handle
             }
         }
+
+        if frameRect.contains(location) {
+            return .move
+        }
+
+        return nil
     }
 
     private func updatedRect(
@@ -365,54 +446,6 @@ private struct CropOverlayView: View {
         switch handle {
         case .move:
             return movedRect(initialRect, translation: translation, bounds: bounds)
-        case .left:
-            if let aspectRatio {
-                return fixedAspectRectForHorizontalEdge(
-                    proposedX: initialRect.minX + translation.width,
-                    anchorX: initialRect.maxX,
-                    centerY: initialRect.midY,
-                    movingLeft: true,
-                    bounds: bounds,
-                    aspectRatio: aspectRatio
-                )
-            }
-            return freeRect(initialRect, movingLeftTo: initialRect.minX + translation.width, bounds: bounds)
-        case .right:
-            if let aspectRatio {
-                return fixedAspectRectForHorizontalEdge(
-                    proposedX: initialRect.maxX + translation.width,
-                    anchorX: initialRect.minX,
-                    centerY: initialRect.midY,
-                    movingLeft: false,
-                    bounds: bounds,
-                    aspectRatio: aspectRatio
-                )
-            }
-            return freeRect(initialRect, movingRightTo: initialRect.maxX + translation.width, bounds: bounds)
-        case .top:
-            if let aspectRatio {
-                return fixedAspectRectForVerticalEdge(
-                    proposedY: initialRect.minY + translation.height,
-                    anchorY: initialRect.maxY,
-                    centerX: initialRect.midX,
-                    movingUp: true,
-                    bounds: bounds,
-                    aspectRatio: aspectRatio
-                )
-            }
-            return freeRect(initialRect, movingTopTo: initialRect.minY + translation.height, bounds: bounds)
-        case .bottom:
-            if let aspectRatio {
-                return fixedAspectRectForVerticalEdge(
-                    proposedY: initialRect.maxY + translation.height,
-                    anchorY: initialRect.minY,
-                    centerX: initialRect.midX,
-                    movingUp: false,
-                    bounds: bounds,
-                    aspectRatio: aspectRatio
-                )
-            }
-            return freeRect(initialRect, movingBottomTo: initialRect.maxY + translation.height, bounds: bounds)
         case .topLeft:
             return cornerRect(
                 initialRect: initialRect,
@@ -483,46 +516,6 @@ private struct CropOverlayView: View {
         return CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: maxY - rect.minY)
     }
 
-    private func fixedAspectRectForHorizontalEdge(
-        proposedX: CGFloat,
-        anchorX: CGFloat,
-        centerY: CGFloat,
-        movingLeft: Bool,
-        bounds: CGRect,
-        aspectRatio: CGFloat
-    ) -> CGRect {
-        let horizontalLimit = movingLeft ? anchorX - bounds.minX : bounds.maxX - anchorX
-        let verticalLimit = min(centerY - bounds.minY, bounds.maxY - centerY) * 2 * aspectRatio
-        let maxWidth = max(min(horizontalLimit, verticalLimit), 1)
-        let minWidth = min(minCropLength, maxWidth)
-        let rawWidth = movingLeft ? anchorX - proposedX : proposedX - anchorX
-        let width = rawWidth.clamped(to: minWidth...max(maxWidth, minWidth))
-        let height = width / aspectRatio
-        let y = (centerY - height / 2).clamped(to: bounds.minY...(bounds.maxY - height))
-        let x = movingLeft ? anchorX - width : anchorX
-        return CGRect(x: x, y: y, width: width, height: height)
-    }
-
-    private func fixedAspectRectForVerticalEdge(
-        proposedY: CGFloat,
-        anchorY: CGFloat,
-        centerX: CGFloat,
-        movingUp: Bool,
-        bounds: CGRect,
-        aspectRatio: CGFloat
-    ) -> CGRect {
-        let verticalLimit = movingUp ? anchorY - bounds.minY : bounds.maxY - anchorY
-        let horizontalLimit = min(centerX - bounds.minX, bounds.maxX - centerX) * 2 / max(aspectRatio, 0.0001)
-        let maxHeight = max(min(verticalLimit, horizontalLimit), 1)
-        let minHeight = min(minCropLength / max(aspectRatio, 0.0001), maxHeight)
-        let rawHeight = movingUp ? anchorY - proposedY : proposedY - anchorY
-        let height = rawHeight.clamped(to: minHeight...max(maxHeight, minHeight))
-        let width = height * aspectRatio
-        let x = (centerX - width / 2).clamped(to: bounds.minX...(bounds.maxX - width))
-        let y = movingUp ? anchorY - height : anchorY
-        return CGRect(x: x, y: y, width: width, height: height)
-    }
-
     private func cornerRect(
         initialRect: CGRect,
         movingPoint: CGPoint,
@@ -571,66 +564,89 @@ private struct CropOverlayView: View {
         let verticalLimit = verticalDirection < 0 ? oppositePoint.y - bounds.minY : bounds.maxY - oppositePoint.y
         let maxWidth = max(min(horizontalLimit, verticalLimit * aspectRatio), 1)
         let minWidth = min(minCropLength, maxWidth)
-
         let rawWidth = abs(oppositePoint.x - movingPoint.x)
         let rawHeightWidth = abs(oppositePoint.y - movingPoint.y) * aspectRatio
         let width = min(rawWidth, rawHeightWidth).clamped(to: minWidth...max(maxWidth, minWidth))
         let height = width / aspectRatio
-
         let originX = horizontalDirection < 0 ? oppositePoint.x - width : oppositePoint.x
         let originY = verticalDirection < 0 ? oppositePoint.y - height : oppositePoint.y
         return CGRect(x: originX, y: originY, width: width, height: height)
     }
 }
 
+private struct CropOverlayGuides: Shape {
+    let style: CropOverlayPreset
+
+    func path(in rect: CGRect) -> Path {
+        guard style != .none, rect.width > 0, rect.height > 0 else {
+            return Path()
+        }
+
+        switch style {
+        case .none:
+            return Path()
+        case .ruleOfThirds:
+            return fractionalGrid(in: rect, fractions: [1.0 / 3.0, 2.0 / 3.0])
+        case .goldenRatio:
+            let phi = (sqrt(5.0) - 1.0) / 2.0
+            return fractionalGrid(in: rect, fractions: [1.0 - phi, phi])
+        case .diagonal:
+            var path = Path()
+            path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.move(to: CGPoint(x: rect.maxX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            return path
+        case .grid:
+            return fractionalGrid(in: rect, fractions: [0.2, 0.4, 0.6, 0.8])
+        }
+    }
+
+    private func fractionalGrid(in rect: CGRect, fractions: [Double]) -> Path {
+        Path { path in
+            for fraction in fractions {
+                let x = rect.minX + rect.width * fraction
+                let y = rect.minY + rect.height * fraction
+
+                path.move(to: CGPoint(x: x, y: rect.minY))
+                path.addLine(to: CGPoint(x: x, y: rect.maxY))
+                path.move(to: CGPoint(x: rect.minX, y: y))
+                path.addLine(to: CGPoint(x: rect.maxX, y: y))
+            }
+        }
+    }
+}
+
 private struct CropDragState {
     let handle: CropHandle
-    let initialRect: CGRect
+    let initialFrameRect: CGRect
+    let initialCrop: CropSettings
 }
 
 private enum CropHandle {
     case move
-    case top
-    case bottom
-    case left
-    case right
     case topLeft
     case topRight
     case bottomLeft
     case bottomRight
 
-    func position(in rect: CGRect, inset: CGFloat) -> CGPoint {
-        let insetX = min(inset, rect.width / 2)
-        let insetY = min(inset, rect.height / 2)
-
+    func position(in rect: CGRect) -> CGPoint {
         switch self {
         case .move:
             return CGPoint(x: rect.midX, y: rect.midY)
-        case .top:
-            return CGPoint(x: rect.midX, y: rect.minY + insetY)
-        case .bottom:
-            return CGPoint(x: rect.midX, y: rect.maxY - insetY)
-        case .left:
-            return CGPoint(x: rect.minX + insetX, y: rect.midY)
-        case .right:
-            return CGPoint(x: rect.maxX - insetX, y: rect.midY)
         case .topLeft:
-            return CGPoint(x: rect.minX + insetX, y: rect.minY + insetY)
+            return CGPoint(x: rect.minX, y: rect.minY)
         case .topRight:
-            return CGPoint(x: rect.maxX - insetX, y: rect.minY + insetY)
+            return CGPoint(x: rect.maxX, y: rect.minY)
         case .bottomLeft:
-            return CGPoint(x: rect.minX + insetX, y: rect.maxY - insetY)
+            return CGPoint(x: rect.minX, y: rect.maxY)
         case .bottomRight:
-            return CGPoint(x: rect.maxX - insetX, y: rect.maxY - insetY)
+            return CGPoint(x: rect.maxX, y: rect.maxY)
         }
     }
 
-    func hitSize(handleHitSize: CGFloat, edgeHandleLength: CGFloat) -> CGSize {
+    func hitSize(handleHitSize: CGFloat) -> CGSize {
         switch self {
-        case .left, .right:
-            return CGSize(width: handleHitSize, height: edgeHandleLength + 10)
-        case .top, .bottom:
-            return CGSize(width: edgeHandleLength + 10, height: handleHitSize)
         case .move:
             return .zero
         default:
@@ -638,12 +654,8 @@ private enum CropHandle {
         }
     }
 
-    func markerSize(cornerHandleSize: CGFloat, edgeHandleLength: CGFloat) -> CGSize {
+    func markerSize(cornerHandleSize: CGFloat) -> CGSize {
         switch self {
-        case .left, .right:
-            return CGSize(width: 5, height: edgeHandleLength)
-        case .top, .bottom:
-            return CGSize(width: edgeHandleLength, height: 5)
         case .move:
             return .zero
         default:

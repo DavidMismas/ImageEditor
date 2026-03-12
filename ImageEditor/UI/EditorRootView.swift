@@ -99,7 +99,7 @@ struct EditorRootView: View {
                 .frame(height: 18)
 
             Button("Fit", action: viewModel.fitPreview)
-            Button("100%", action: viewModel.zoomToActualPixels)
+            Button("100%", action: viewModel.toggleActualPixelsZoom)
             Slider(value: $viewModel.zoomScale, in: 0.25...3)
                 .frame(width: 110)
 

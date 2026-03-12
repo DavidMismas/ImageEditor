@@ -17,6 +17,13 @@ struct CropPanelView: View {
                 }
                 .pickerStyle(.menu)
 
+                Picker("Overlay", selection: document.binding(for: \.crop.overlay)) {
+                    ForEach(CropOverlayPreset.allCases) { preset in
+                        Text(preset.rawValue).tag(preset)
+                    }
+                }
+                .pickerStyle(.menu)
+
                 HStack(spacing: 10) {
                     Button("Rotate Left") {
                         document.updateSettings { $0.crop.rotationQuarterTurns -= 1 }
@@ -29,15 +36,9 @@ struct CropPanelView: View {
                 }
 
                 AdjustmentSlider(title: "Straighten", value: document.binding(for: \.crop.straighten), range: -45...45, format: "%.1f")
-                AdjustmentSlider(title: "Crop Zoom", value: document.binding(for: \.crop.zoom), range: 1...5, format: "%.2f")
-                AdjustmentSlider(title: "Horizontal", value: document.binding(for: \.crop.centerX), range: 0...1, format: "%.2f")
-                AdjustmentSlider(title: "Vertical", value: document.binding(for: \.crop.centerY), range: 0...1, format: "%.2f")
-
-                if document.settings.crop.aspectPreset == .free {
-                    Divider().padding(.vertical, 2)
-                    AdjustmentSlider(title: "Width", value: document.binding(for: \.crop.freeformWidth), range: 0.2...1, format: "%.2f")
-                    AdjustmentSlider(title: "Height", value: document.binding(for: \.crop.freeformHeight), range: 0.2...1, format: "%.2f")
-                }
+                Text("Use the crop overlay on the canvas to resize and move the crop.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .padding(18)
         }

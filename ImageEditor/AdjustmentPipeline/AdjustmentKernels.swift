@@ -36,7 +36,7 @@ enum AdjustmentKernels {
         float epsilon = 0.0001;
         float logitValue = log((t + epsilon) / (1.0 - t + epsilon));
         float logitPivot = log((pivot + epsilon) / (1.0 - pivot + epsilon));
-        float contrastGain = exp2(contrast * 0.85);
+        float contrastGain = exp2(contrast * 1.05);
         t = 1.0 / (1.0 + exp(-(logitPivot + (logitValue - logitPivot) * contrastGain)));
         float tonalT = t;
 
@@ -70,24 +70,58 @@ enum AdjustmentKernels {
 
         // Blacks should anchor the toe, but still reach a little farther into
         // the low mids than a pure endpoint control.
-        float blackWeight = 1.0 - smoothstep(0.02, 0.16, t);
+        float blackWeight = 1.0 - smoothstep(0.02, 0.24, t);
         blackWeight *= blackWeight;
-        float blackExponent = exp2(-blacks * 1.55);
+        float blackExponent = exp2(-blacks * 1.75);
         float blackTarget = pow(clamp(t, 0.0, 1.0), blackExponent);
-        t = mix(t, blackTarget, clamp(abs(blacks) * blackWeight, 0.0, 1.0));
+        t = mix(t, blackTarget, clamp(abs(blacks) * blackWeight * 1.06, 0.0, 1.0));
 
         // Whites should brighten a broad upper range, but still keep a soft
         // shoulder so bright bark/cloud detail is not flattened immediately.
-        float whiteWeight = smoothstep(0.08, 0.52, t);
-        whiteWeight *= 0.44 + 0.56 * whiteWeight;
-        float whiteExponent = exp2(whites * 0.72);
-        float whiteTarget = 1.0 - pow(max(1.0 - t, 0.00001), whiteExponent);
-        t = mix(t, clamp(whiteTarget, 0.0, 0.9995), clamp(abs(whites) * whiteWeight * 1.04, 0.0, 1.0));
+        if (whites >= 0.0) {
+            float whiteWeight = smoothstep(0.04, 0.46, t);
+            whiteWeight *= 0.36 + 0.64 * whiteWeight;
+            float whiteExponent = exp2(whites * 0.96);
+            float whiteTarget = 1.0 - pow(max(1.0 - t, 0.00001), whiteExponent);
+            float whiteBlend = clamp(whites * whiteWeight * 1.18, 0.0, 1.0);
+            t = mix(t, clamp(whiteTarget, 0.0, 0.9995), whiteBlend);
+
+            // Lightroom-like whites also add separation across upper mids and
+            // highlights instead of only lifting the endpoint.
+            float shoulderPunchMask = smoothstep(0.18, 0.74, t) * (1.0 - smoothstep(0.92, 0.995, t));
+            float shoulderPunch = whites * shoulderPunchMask * 0.055;
+            t = clamp(t + (t - pivot) * shoulderPunch, 0.0, 0.9995);
+        } else {
+            float whiteWeight = smoothstep(0.10, 0.60, t);
+            whiteWeight *= 0.46 + 0.54 * whiteWeight;
+            float whiteExponent = exp2(whites * 0.72);
+            float whiteTarget = 1.0 - pow(max(1.0 - t, 0.00001), whiteExponent);
+            t = mix(t, clamp(whiteTarget, 0.0, 0.9995), clamp(abs(whites) * whiteWeight * 1.04, 0.0, 1.0));
+        }
 
         t = clamp(t, 0.0, 0.9995);
         float remappedY = t / max(1.0 - t, 0.0005);
         float scale = remappedY / Y;
         color = max(color * scale, 0.0);
+
+        // Perceptually, stronger positive contrast should not wash color out.
+        // Preserve a bit more chroma through the mid/high tones so contrast
+        // behaves closer to pro photo editors.
+        float chromaMask = smoothstep(0.05, 0.22, t) * (1.0 - smoothstep(0.94, 0.995, t));
+        float shadowChromaMask = smoothstep(0.03, 0.12, t) * (1.0 - smoothstep(0.34, 0.56, t));
+        float highlightChromaMask = smoothstep(0.20, 0.54, t) * (1.0 - smoothstep(0.94, 0.995, t));
+        vec3 neutral = vec3(remappedY);
+        vec3 chroma = color - neutral;
+        if (contrast > 0.0) {
+            float contrastColorBoost = contrast * chromaMask * 0.22;
+            float whiteColorBoost = max(whites, 0.0) * highlightChromaMask * 0.10;
+            float blackColorBoost = max(-blacks, 0.0) * shadowChromaMask * 0.07;
+            float chromaGain = 1.0 + contrastColorBoost + whiteColorBoost + blackColorBoost;
+            color = max(neutral + chroma * chromaGain, 0.0);
+        } else if (contrast < 0.0) {
+            float chromaGain = max(1.0 + contrast * chromaMask * 0.10, 0.0);
+            color = max(neutral + chroma * chromaGain, 0.0);
+        }
 
         float shoulderProtect = clamp(max(-highlights, 0.0) + max(whites, 0.0) * 0.22, 0.0, 1.0);
         if (shoulderProtect > 0.0) {
@@ -127,24 +161,50 @@ enum AdjustmentKernels {
     """)
 
     static let highlightColorProtect = CIColorKernel(source: """
-    kernel vec4 highlightColorProtect(__sample pixel, float amount) {
-        vec3 color = max(pixel.rgb, vec3(0.0));
+    kernel vec4 highlightColorProtect(__sample original, __sample recovered, float amount) {
+        vec3 source = max(original.rgb, vec3(0.0));
+        vec3 color = max(recovered.rgb, vec3(0.0));
+
+        float sourceY = max(dot(source, vec3(0.2126, 0.7152, 0.0722)), 0.0001);
         float Y = max(dot(color, vec3(0.2126, 0.7152, 0.0722)), 0.0001);
+        float sourcePeak = max(source.r, max(source.g, source.b));
         float peak = max(color.r, max(color.g, color.b));
         float tonal = peak / (1.0 + peak);
 
         vec3 neutral = vec3(Y);
-        float relativeChroma = length(color - neutral) / max(Y + 0.05, 0.05);
+        float sourceChroma = length(source - vec3(sourceY)) / max(sourceY + 0.05, 0.05);
+        float recoveredChroma = length(color - neutral) / max(Y + 0.05, 0.05);
 
-        float brightMask = smoothstep(0.42, 0.88, tonal);
-        float chromaMask = smoothstep(0.08, 0.62, relativeChroma);
-        float protect = clamp(amount, 0.0, 1.0) * brightMask * chromaMask;
+        vec3 sourceRatio = source / sourceY;
+        vec3 recoveredRatio = color / Y;
+        float hueDrift = length(recoveredRatio - sourceRatio);
+        float hueDriftMask = smoothstep(0.08, 0.44, hueDrift);
 
-        // Only pull the most aggressive recovered highlights back toward
-        // neutral. This suppresses blue/purple color casts without washing out
-        // normal highlight color everywhere else.
-        vec3 corrected = mix(color, neutral, protect * 0.34);
-        return vec4(corrected, pixel.a);
+        float excessChroma = max(recoveredChroma - sourceChroma * 1.18, 0.0);
+        float excessChromaMask = smoothstep(0.01, 0.18, excessChroma);
+        float brightMask = smoothstep(0.34, 0.84, tonal);
+        float clippedSourceMask = smoothstep(0.78, 1.35, sourcePeak);
+        float sourceNeutralMask = 1.0 - smoothstep(0.02, 0.14, sourceChroma);
+
+        // If the original highlight still has usable color, keep the recovered
+        // luminance but pull the hue back toward the source highlight ratio.
+        vec3 sourceAnchored = max(sourceRatio * Y, vec3(0.0));
+        float anchorAmount = clamp(amount, 0.0, 1.0) * brightMask * hueDriftMask * (1.0 - clippedSourceMask) * 0.82;
+        vec3 anchored = mix(color, sourceAnchored, anchorAmount);
+
+        float anchoredPeak = max(anchored.r, max(anchored.g, anchored.b));
+        float anchoredFloor = min(anchored.r, min(anchored.g, anchored.b));
+        float channelImbalance = (anchoredPeak - anchoredFloor) / max(dot(anchored, vec3(0.2126, 0.7152, 0.0722)) + 0.05, 0.05);
+        float imbalanceMask = smoothstep(0.04, 0.24, channelImbalance);
+
+        // If the source is already clipping, recovered color is often the
+        // synthetic blue/magenta cast. In that case, push only the excess
+        // chroma back toward neutral.
+        float clippedNeutralize = clippedSourceMask * max(hueDriftMask, smoothstep(0.04, 0.28, recoveredChroma));
+        float neutralHighlightMask = brightMask * sourceNeutralMask * max(hueDriftMask, imbalanceMask);
+        float neutralizeAmount = clamp(amount, 0.0, 1.0) * brightMask * max(max(excessChromaMask, clippedNeutralize), max(imbalanceMask * 0.85, neutralHighlightMask));
+        vec3 corrected = mix(anchored, vec3(dot(anchored, vec3(0.2126, 0.7152, 0.0722))), neutralizeAmount * 0.72);
+        return vec4(max(corrected, 0.0), recovered.a);
     }
     """)
 
@@ -156,14 +216,21 @@ enum AdjustmentKernels {
     """)
 
     static let clarity = CIColorKernel(source: """
-    kernel vec4 clarity(__sample original, __sample blurred, float amount) {
+    kernel vec4 clarity(__sample original, __sample broadBlur, __sample fineBlur, float amount) {
         float originalLuma = max(dot(original.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.0001);
-        float blurredLuma = dot(blurred.rgb, vec3(0.2126, 0.7152, 0.0722));
-        float detail = originalLuma - blurredLuma;
-        float softDetail = detail / (1.0 + abs(detail) * 12.0);
+        float broadLuma = dot(broadBlur.rgb, vec3(0.2126, 0.7152, 0.0722));
+        float fineLuma = dot(fineBlur.rgb, vec3(0.2126, 0.7152, 0.0722));
+        float broadDetail = originalLuma - broadLuma;
+        float fineDetail = originalLuma - fineLuma;
+        float softBroad = broadDetail / (1.0 + abs(broadDetail) * 10.0);
+        float softFine = fineDetail / (1.0 + abs(fineDetail) * 18.0);
         float tonal = originalLuma / (1.0 + originalLuma);
-        float midtoneMask = smoothstep(0.08, 0.32, tonal) * (1.0 - smoothstep(0.72, 0.96, tonal));
-        float targetLuma = max(0.0, originalLuma + softDetail * amount * midtoneMask * 1.45);
+        float midtoneMask = smoothstep(0.05, 0.28, tonal) * (1.0 - smoothstep(0.78, 0.97, tonal));
+        float positive = max(amount, 0.0);
+        float negative = max(-amount, 0.0);
+        float positiveDetail = (softBroad * (0.88 + positive * 0.20) + softFine * (0.28 + positive * 0.44)) * positive * 1.34;
+        float negativeDetail = softBroad * negative * 0.92;
+        float targetLuma = max(0.0, originalLuma + (positiveDetail - negativeDetail) * midtoneMask);
         float scale = targetLuma / originalLuma;
         return vec4(max(original.rgb * scale, 0.0), original.a);
     }
@@ -174,9 +241,11 @@ enum AdjustmentKernels {
         float originalLuma = max(dot(original.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.0001);
         float blurredLuma = dot(blurred.rgb, vec3(0.2126, 0.7152, 0.0722));
         float detail = originalLuma - blurredLuma;
-        float edgeMask = smoothstep(threshold, threshold * 4.0, abs(detail));
-        float protectedDetail = detail / (1.0 + abs(detail) * 18.0);
-        float targetLuma = max(0.0, originalLuma + protectedDetail * amount * edgeMask * 1.15);
+        float edgeMask = smoothstep(threshold * 0.65, threshold * 2.6, abs(detail));
+        float protectedDetail = detail / (1.0 + abs(detail) * 14.0);
+        float tonal = originalLuma / (1.0 + originalLuma);
+        float tonalMask = smoothstep(0.02, 0.16, tonal) * (1.0 - smoothstep(0.92, 0.99, tonal));
+        float targetLuma = max(0.0, originalLuma + protectedDetail * amount * edgeMask * tonalMask * 1.28);
         float scale = targetLuma / originalLuma;
         return vec4(max(original.rgb * scale, 0.0), original.a);
     }

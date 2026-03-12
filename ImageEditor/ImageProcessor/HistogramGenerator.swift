@@ -3,7 +3,14 @@ import Foundation
 
 actor HistogramGenerator {
     func generate(from image: CIImage, context: CIContext, bins: Int = HistogramData.defaultBinCount) -> HistogramData {
-        let histogramSource = image
+        guard !image.extent.isEmpty else {
+            return .empty
+        }
+
+        let histogramSource = AdjustmentKernels.sceneCompress?.apply(
+            extent: image.extent,
+            arguments: [image]
+        ) ?? image
 
         guard let filter = CIFilter(name: "CIAreaHistogram") else {
             return .empty
@@ -12,11 +19,19 @@ actor HistogramGenerator {
         filter.setValue(histogramSource, forKey: kCIInputImageKey)
         filter.setValue(CIVector(cgRect: histogramSource.extent), forKey: kCIInputExtentKey)
         filter.setValue(bins, forKey: "inputCount")
-        filter.setValue(1.0 / max(histogramSource.extent.width * histogramSource.extent.height, 1), forKey: "inputScale")
+        filter.setValue(1.0, forKey: "inputScale")
 
         guard let output = filter.outputImage else {
             return .empty
         }
+
+        let translatedOutput = output.transformed(
+            by: CGAffineTransform(
+                translationX: -output.extent.origin.x,
+                y: -output.extent.origin.y
+            )
+        )
+        let renderBounds = CGRect(x: 0, y: 0, width: bins, height: 1)
 
         var bitmap = [Float](repeating: 0, count: bins * 4)
         bitmap.withUnsafeMutableBytes { buffer in
@@ -25,10 +40,10 @@ actor HistogramGenerator {
             }
 
             context.render(
-                output,
+                translatedOutput,
                 toBitmap: baseAddress,
                 rowBytes: bins * 4 * MemoryLayout<Float>.size,
-                bounds: CGRect(x: 0, y: 0, width: bins, height: 1),
+                bounds: renderBounds,
                 format: .RGBAf,
                 colorSpace: nil
             )
@@ -56,10 +71,17 @@ actor HistogramGenerator {
         let normalizer = max(maxValue, 0.0001)
 
         return HistogramData(
-            red: red.map { $0 / normalizer },
-            green: green.map { $0 / normalizer },
-            blue: blue.map { $0 / normalizer },
-            luma: luma.map { $0 / normalizer }
+            red: normalized(red, by: normalizer),
+            green: normalized(green, by: normalizer),
+            blue: normalized(blue, by: normalizer),
+            luma: normalized(luma, by: normalizer)
         )
+    }
+
+    private func normalized(_ values: [Double], by normalizer: Double) -> [Double] {
+        values.map { value in
+            let finiteValue = value.isFinite ? value : 0
+            return max(0, finiteValue / normalizer)
+        }
     }
 }

@@ -10,19 +10,25 @@ struct ClarityProcessor: Sendable {
 
         let normalizedAmount = Float(amount.clamped(to: -100...100) / 100)
         let strength = abs(normalizedAmount)
-        let blurRadius = max(image.extent.size.longestSide * 0.008, 10) * CGFloat(0.65 + strength)
-        let blurred = image
+        let broadRadius = max(image.extent.size.longestSide * 0.0048, 6) * CGFloat(0.8 + strength * 0.7)
+        let fineRadius = max(image.extent.size.longestSide * 0.0011, 1.2) * CGFloat(0.9 + strength * 0.35)
+
+        let broadBlur = image
             .clampedToExtent()
-            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: blurRadius])
+            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: broadRadius])
+            .cropped(to: image.extent)
+        let fineBlur = image
+            .clampedToExtent()
+            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: fineRadius])
             .cropped(to: image.extent)
 
         let tunedAmount: Float = normalizedAmount >= 0
-            ? normalizedAmount * 1.25
+            ? normalizedAmount * 1.15
             : normalizedAmount * 1.10
 
         return AdjustmentKernels.clarity?.apply(
             extent: image.extent,
-            arguments: [image, blurred, tunedAmount]
+            arguments: [image, broadBlur, fineBlur, tunedAmount]
         ) ?? image
     }
 }

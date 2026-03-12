@@ -10,6 +10,8 @@ private struct RAWDecodedImageCacheKey: Hashable, Sendable {
     let highlightRecoveryEnabled: Bool
     let lensCorrectionEnabled: Bool
     let extendedDynamicRangeBucket: Int
+    let luminanceNoiseReductionBucket: Int
+    let colorNoiseReductionBucket: Int
 
     init(url: URL, configuration: RAWDecodeConfiguration) {
         self.url = url
@@ -21,6 +23,8 @@ private struct RAWDecodedImageCacheKey: Hashable, Sendable {
         highlightRecoveryEnabled = configuration.enableHighlightRecovery
         lensCorrectionEnabled = configuration.enableLensCorrection
         extendedDynamicRangeBucket = Int((configuration.extendedDynamicRangeAmount * 100).rounded())
+        luminanceNoiseReductionBucket = Int((configuration.luminanceNoiseReductionScale * 100).rounded())
+        colorNoiseReductionBucket = Int((configuration.colorNoiseReductionScale * 100).rounded())
     }
 }
 

@@ -15,10 +15,10 @@ struct SharpenProcessor: Sendable {
             .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: blurRadius])
             .cropped(to: image.extent)
 
-        let threshold = Float(0.0025 + (1 - normalizedAmount) * 0.01)
+        let threshold = Float(0.0014 + (1 - normalizedAmount) * 0.006)
         return AdjustmentKernels.sharpen?.apply(
             extent: image.extent,
-            arguments: [image, blurred, normalizedAmount, threshold]
+            arguments: [image, blurred, normalizedAmount * 1.12, threshold]
         ) ?? image
     }
 }

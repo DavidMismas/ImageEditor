@@ -90,6 +90,16 @@ actor RAWImageDecoder {
         filter.extendedDynamicRangeAmount = Float(configuration.extendedDynamicRangeAmount)
         filter.isGamutMappingEnabled = true
 
+        // Apple's RAW defaults can be overly smoothing on some files. Keep the
+        // camera-aware baseline, but back off built-in noise reduction so fine
+        // detail and color separation survive into our editor pipeline.
+        if filter.isLuminanceNoiseReductionSupported {
+            filter.luminanceNoiseReductionAmount *= Float(configuration.luminanceNoiseReductionScale)
+        }
+        if filter.isColorNoiseReductionSupported {
+            filter.colorNoiseReductionAmount *= Float(configuration.colorNoiseReductionScale)
+        }
+
         if filter.isHighlightRecoverySupported {
             filter.isHighlightRecoveryEnabled = configuration.enableHighlightRecovery
         }

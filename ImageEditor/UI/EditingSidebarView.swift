@@ -157,6 +157,12 @@ struct EditingSidebarView: View {
                 }
             }
 
+            compactMenu("Overlay", selection: document.binding(for: \.crop.overlay)) {
+                ForEach(CropOverlayPreset.allCases) { preset in
+                    Text(preset.rawValue).tag(preset)
+                }
+            }
+
             HStack(spacing: 8) {
                 Button("Left") {
                     document.updateSettings { $0.crop.rotationQuarterTurns -= 1 }
@@ -172,7 +178,7 @@ struct EditingSidebarView: View {
             .controlSize(.small)
 
             AdjustmentSlider(title: "Straighten", value: document.binding(for: \.crop.straighten), range: -45...45, format: "%.1f")
-            Text("Drag edges and corners directly on the preview.")
+            Text("Drag handles to resize and drag inside the frame to move the crop.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
