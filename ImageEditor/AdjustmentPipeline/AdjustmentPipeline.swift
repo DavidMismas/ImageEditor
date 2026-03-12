@@ -17,9 +17,10 @@ actor ImageAdjustmentPipeline {
         asset: PhotoAsset,
         settings: AdjustmentSettings,
         presets: [UUID: LUTPreset],
-        quality: RenderQuality
+        quality: RenderQuality,
+        includeCrop: Bool = true
     ) async -> CIImage {
-        var image = normalizeSourceImage(applyGeometry(to: baseImage, settings: settings))
+        var image = normalizeSourceImage(applyGeometry(to: baseImage, settings: settings, includeCrop: includeCrop))
         image = baseToneProcessor.apply(to: image, asset: asset, settings: settings)
         image = whiteBalanceProcessor.apply(to: image, asset: asset, settings: settings)
         image = await applySelectiveColorAdjustments(to: image, settings: settings, quality: quality)
@@ -31,8 +32,8 @@ actor ImageAdjustmentPipeline {
         return image
     }
 
-    func renderReference(from baseImage: CIImage, settings: AdjustmentSettings) -> CIImage {
-        normalizeSourceImage(applyGeometry(to: baseImage, settings: settings))
+    func renderReference(from baseImage: CIImage, settings: AdjustmentSettings, includeCrop: Bool = true) -> CIImage {
+        normalizeSourceImage(applyGeometry(to: baseImage, settings: settings, includeCrop: includeCrop))
     }
 
     private func normalizeSourceImage(_ image: CIImage) -> CIImage {
@@ -79,7 +80,7 @@ actor ImageAdjustmentPipeline {
         ) ?? boundedOutput
     }
 
-    private func applyGeometry(to image: CIImage, settings: AdjustmentSettings) -> CIImage {
+    private func applyGeometry(to image: CIImage, settings: AdjustmentSettings, includeCrop: Bool) -> CIImage {
         let crop = settings.crop
         let sourceExtent = image.extent
         let center = CGPoint(x: sourceExtent.midX, y: sourceExtent.midY)
@@ -96,52 +97,12 @@ actor ImageAdjustmentPipeline {
 
         let transformed = image.transformed(by: transform)
         let transformedExtent = transformed.extent.integral
-        let cropRect = cropRect(for: transformedExtent, crop: crop)
-        return transformed.cropped(to: cropRect.integral)
-    }
-
-    private func cropRect(for extent: CGRect, crop: CropSettings) -> CGRect {
-        let zoom = CGFloat(crop.zoom.clamped(to: 1...5))
-        let aspectRatio: CGFloat? = switch crop.aspectPreset {
-        case .original:
-            extent.width / max(extent.height, 1)
-        case .free:
-            nil
-        default:
-            CGFloat(crop.aspectPreset.aspectRatio ?? 1)
+        guard includeCrop else {
+            return transformed
         }
 
-        var cropWidth = extent.width
-        var cropHeight = extent.height
-
-        if let aspectRatio {
-            if extent.width / max(extent.height, 1) > aspectRatio {
-                cropHeight = extent.height / zoom
-                cropWidth = cropHeight * aspectRatio
-            } else {
-                cropWidth = extent.width / zoom
-                cropHeight = cropWidth / max(aspectRatio, 0.0001)
-            }
-        } else {
-            cropWidth = extent.width * CGFloat(crop.freeformWidth.clamped(to: 0.2...1))
-            cropHeight = extent.height * CGFloat(crop.freeformHeight.clamped(to: 0.2...1))
-            cropWidth /= zoom
-            cropHeight /= zoom
-        }
-
-        cropWidth = max(16, min(cropWidth, extent.width))
-        cropHeight = max(16, min(cropHeight, extent.height))
-
-        let centerX = extent.minX + extent.width * CGFloat(crop.centerX.clamped(to: 0...1))
-        let centerY = extent.minY + extent.height * CGFloat(crop.centerY.clamped(to: 0...1))
-
-        var originX = centerX - cropWidth / 2
-        var originY = centerY - cropHeight / 2
-
-        originX = originX.clamped(to: extent.minX...(extent.maxX - cropWidth))
-        originY = originY.clamped(to: extent.minY...(extent.maxY - cropHeight))
-
-        return CGRect(x: originX, y: originY, width: cropWidth, height: cropHeight)
+        let cropRect = CropMath.cropRect(for: transformedExtent, crop: crop)
+        return transformed.cropped(to: cropRect)
     }
 }
 

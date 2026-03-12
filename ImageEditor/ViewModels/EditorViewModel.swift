@@ -13,8 +13,16 @@ final class EditorViewModel: ObservableObject {
     @Published var previewMode: PreviewMode = .edited {
         didSet { requestRender() }
     }
+    @Published var isCropOverlayActive = false {
+        didSet {
+            if isCropOverlayActive != oldValue {
+                requestRender()
+            }
+        }
+    }
     @Published var previewImage: NSImage?
     @Published var comparisonImage: NSImage?
+    @Published var cropPreviewImage: NSImage?
     @Published var histogram: HistogramData = .empty
     @Published var zoomScale: CGFloat = 1 {
         didSet {
@@ -249,6 +257,7 @@ final class EditorViewModel: ObservableObject {
             guard let request = makeCurrentRenderRequest() else {
                 previewImage = nil
                 comparisonImage = nil
+                cropPreviewImage = nil
                 histogram = .empty
                 isRendering = false
                 return
@@ -264,7 +273,8 @@ final class EditorViewModel: ObservableObject {
                     presets: request.presets,
                     targetSize: request.targetSize,
                     previewMode: request.previewMode,
-                    fullResolutionPreview: request.fullResolutionPreview
+                    fullResolutionPreview: request.fullResolutionPreview,
+                    includeCropSource: request.includeCropSource
                 )
 
                 guard selectedDocumentID == request.asset.id else {
@@ -277,6 +287,7 @@ final class EditorViewModel: ObservableObject {
 
                 previewImage = result.primaryImage
                 comparisonImage = result.comparisonImage
+                cropPreviewImage = result.cropImage
                 histogram = result.histogram
             } catch {
                 guard selectedDocumentID == request.asset.id else {
@@ -312,7 +323,8 @@ final class EditorViewModel: ObservableObject {
                 width: previewSize.width * max(zoomScale, 1),
                 height: previewSize.height * max(zoomScale, 1)
             ),
-            fullResolutionPreview: !fitToScreen && zoomScale >= 1
+            fullResolutionPreview: !fitToScreen && zoomScale >= 1,
+            includeCropSource: isCropOverlayActive
         )
     }
 }
@@ -325,4 +337,5 @@ private struct RenderRequest {
     let previewMode: PreviewMode
     let targetSize: CGSize
     let fullResolutionPreview: Bool
+    let includeCropSource: Bool
 }

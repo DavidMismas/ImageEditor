@@ -10,11 +10,13 @@ struct PreviewCacheKey: Hashable, Sendable {
     let widthBucket: Int
     let heightBucket: Int
     let fullResolutionPreview: Bool
+    let includeCropSource: Bool
 }
 
 struct PreviewRenderResult: @unchecked Sendable {
     let primaryImage: NSImage?
     let comparisonImage: NSImage?
+    let cropImage: NSImage?
     let histogram: HistogramData
 }
 
@@ -36,7 +38,8 @@ actor ImageProcessor {
         presets: [UUID: LUTPreset],
         targetSize: CGSize,
         previewMode: PreviewMode,
-        fullResolutionPreview: Bool
+        fullResolutionPreview: Bool,
+        includeCropSource: Bool
     ) async throws -> PreviewRenderResult {
         let safeTargetSize = CGSize(
             width: max(targetSize.width, 800),
@@ -48,7 +51,8 @@ actor ImageProcessor {
             previewMode: previewMode,
             widthBucket: Int(safeTargetSize.width / 32),
             heightBucket: Int(safeTargetSize.height / 32),
-            fullResolutionPreview: fullResolutionPreview
+            fullResolutionPreview: fullResolutionPreview,
+            includeCropSource: includeCropSource
         )
 
         if let cached = await previewCache.value(for: cacheKey) {
@@ -69,6 +73,18 @@ actor ImageProcessor {
             presets: presets,
             quality: .preview
         )
+        let cropSourceImage: CIImage? = if includeCropSource {
+            await pipeline.renderEdited(
+                from: editedDecoded.image,
+                asset: asset,
+                settings: settings,
+                presets: presets,
+                quality: .preview,
+                includeCrop: false
+            )
+        } else {
+            nil
+        }
         let referenceSource: CIImage
         if asset.isRAW, previewMode != .edited {
             let referenceDecoded = try await decoder.decode(
@@ -100,6 +116,7 @@ actor ImageProcessor {
         let result = PreviewRenderResult(
             primaryImage: renderNSImage(from: primaryCIImage, colorSpace: ColorPipeline.displayP3),
             comparisonImage: comparisonCIImage.flatMap { renderNSImage(from: $0, colorSpace: ColorPipeline.displayP3) },
+            cropImage: cropSourceImage.flatMap { renderNSImage(from: $0, colorSpace: ColorPipeline.displayP3) },
             histogram: await histogramGenerator.generate(from: primaryCIImage, context: context)
         )
 

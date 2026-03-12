@@ -4,6 +4,8 @@ struct EditingSidebarView: View {
     @ObservedObject var document: PhotoDocument
     let luts: [LUTPreset]
     let onImportLUT: () -> Void
+    let isCropOverlayActive: Bool
+    let onToggleCropOverlay: () -> Void
 
     @State private var selectedChannel: HSLChannelKind = .orange
     @State private var cropExpanded = true
@@ -143,6 +145,12 @@ struct EditingSidebarView: View {
 
     private var cropControls: some View {
         VStack(alignment: .leading, spacing: 10) {
+            Button(isCropOverlayActive ? "Done Crop" : "Edit Crop on Canvas", action: onToggleCropOverlay)
+                .buttonStyle(.borderedProminent)
+                .tint(isCropOverlayActive ? .white.opacity(0.24) : .orange)
+                .foregroundStyle(.white)
+                .controlSize(.small)
+
             compactMenu("Aspect", selection: document.binding(for: \.crop.aspectPreset)) {
                 ForEach(CropAspectPreset.allCases) { preset in
                     Text(preset.rawValue).tag(preset)
@@ -164,14 +172,9 @@ struct EditingSidebarView: View {
             .controlSize(.small)
 
             AdjustmentSlider(title: "Straighten", value: document.binding(for: \.crop.straighten), range: -45...45, format: "%.1f")
-            AdjustmentSlider(title: "Zoom", value: document.binding(for: \.crop.zoom), range: 1...5, format: "%.2f")
-            AdjustmentSlider(title: "Horizontal", value: document.binding(for: \.crop.centerX), range: 0...1, format: "%.2f")
-            AdjustmentSlider(title: "Vertical", value: document.binding(for: \.crop.centerY), range: 0...1, format: "%.2f")
-
-            if document.settings.crop.aspectPreset == .free {
-                AdjustmentSlider(title: "Width", value: document.binding(for: \.crop.freeformWidth), range: 0.2...1, format: "%.2f")
-                AdjustmentSlider(title: "Height", value: document.binding(for: \.crop.freeformHeight), range: 0.2...1, format: "%.2f")
-            }
+            Text("Drag edges and corners directly on the preview.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 

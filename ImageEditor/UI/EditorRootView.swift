@@ -19,10 +19,16 @@ struct EditorRootView: View {
                     PreviewCanvasView(
                         primaryImage: viewModel.previewImage,
                         comparisonImage: viewModel.comparisonImage,
+                        cropOverlayImage: viewModel.cropPreviewImage,
+                        cropSettings: viewModel.isCropOverlayActive ? viewModel.selectedDocument?.settings.crop : nil,
                         mode: viewModel.previewMode,
                         zoomScale: viewModel.zoomScale,
                         fitToScreen: viewModel.fitToScreen,
                         isRendering: viewModel.isRendering,
+                        isCropOverlayActive: viewModel.isCropOverlayActive,
+                        onCropChange: { updatedCrop in
+                            viewModel.selectedDocument?.updateSettings { $0.crop = updatedCrop }
+                        },
                         onSizeChange: viewModel.setPreviewSize
                     )
 
@@ -118,7 +124,11 @@ struct EditorRootView: View {
             EditingSidebarView(
                 document: document,
                 luts: viewModel.importedLUTs,
-                onImportLUT: viewModel.importLUT
+                onImportLUT: viewModel.importLUT,
+                isCropOverlayActive: viewModel.isCropOverlayActive,
+                onToggleCropOverlay: {
+                    viewModel.isCropOverlayActive.toggle()
+                }
             )
         } else {
             VStack(spacing: 10) {
